@@ -13,7 +13,7 @@ No server and no account. Website types use local rules first; optional DeepSeek
 Send your coding agent (Claude Code, Codex, etc.) this repo and say **"install this"**:
 
 ```
-https://github.com/zarazhangrui/tab-out
+https://github.com/xpmv-code/tab-out
 ```
 
 The agent will walk you through it. Takes about 1 minute.
@@ -42,7 +42,7 @@ The agent will walk you through it. Takes about 1 minute.
 **1. Clone the repo**
 
 ```bash
-git clone https://github.com/zarazhangrui/tab-out.git
+git clone https://github.com/xpmv-code/tab-out.git
 ```
 
 **2. Load the Chrome extension**
