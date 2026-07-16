@@ -1,0 +1,833 @@
+/* ================================================================
+   LINEAR / VERCEL UI REFACTOR
+   Neutral surfaces, compact hierarchy, precise borders, quiet motion.
+   ================================================================ */
+
+html {
+  background: var(--paper);
+}
+
+body,
+button,
+input {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  letter-spacing: 0;
+}
+
+.analytics-title h2,
+.tab-cleanup-btn,
+.refresh-btn,
+.update-banner-btn,
+.archive-toggle {
+  font-family: inherit;
+}
+
+body {
+  background: var(--paper);
+  font-size: 15px;
+  line-height: 1.5;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+body::before {
+  display: none;
+}
+
+button,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.container,
+.container:has(.dashboard-columns) {
+  max-width: 1440px;
+  padding: 28px 36px 56px;
+}
+
+header {
+  align-items: center;
+  padding-bottom: 20px;
+  border-color: var(--card-border);
+}
+
+.header-left h1,
+.timeline-view-header h2,
+.section-header h2,
+.analytics-value,
+.mission-page-count,
+.stat-num,
+.empty-title {
+  font-family: inherit;
+}
+
+.header-left h1 {
+  margin-bottom: 2px;
+  font-size: 24px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.header-left .date {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.header-actions {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+}
+
+.view-switcher,
+.group-by-switcher {
+  min-height: 34px;
+  padding: 3px;
+  border-radius: 7px;
+  background: var(--paper);
+}
+
+.view-switch-btn,
+.group-by-btn {
+  height: 28px;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.view-switch-btn.active,
+.group-by-btn.active {
+  background: var(--card-bg-strong);
+  box-shadow: 0 1px 2px var(--shadow), inset 0 0 0 1px var(--card-border);
+}
+
+.group-by-control {
+  gap: 8px;
+}
+
+.group-by-label {
+  font-size: 11px;
+  font-weight: 550;
+}
+
+/* Quick links are a compact utility band, not a card. */
+.quick-links-section {
+  min-height: 0;
+  margin: 0;
+  padding: 18px 0 20px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.quick-link-group-toolbar {
+  margin-bottom: 14px;
+}
+
+.quick-link-group-tabs {
+  gap: 4px;
+}
+
+.quick-link-group-tab {
+  height: 30px;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  padding: 0 9px;
+}
+
+.quick-link-group-tab.active {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--accent-contrast);
+}
+
+.quick-link-group-tab.active .quick-link-group-count {
+  background: color-mix(in srgb, var(--accent-contrast) 16%, transparent);
+  color: inherit;
+}
+
+.quick-link-group-count {
+  font-size: 11px;
+}
+
+.quick-link-group-action {
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+}
+
+.quick-links-strip {
+  gap: 18px;
+  min-height: 64px;
+  padding: 1px 1px 3px;
+}
+
+.quick-link-item {
+  width: 58px;
+}
+
+.quick-link-button,
+.quick-link-add {
+  width: 48px;
+  height: 48px;
+  border-color: var(--card-border);
+  background: var(--card-bg-strong);
+  box-shadow: none;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+
+.quick-link-button:hover,
+.quick-link-add:hover,
+.quick-link-button:focus-visible,
+.quick-link-add:focus-visible {
+  border-color: var(--muted);
+  background: var(--row-bg-hover);
+  box-shadow: none;
+  transform: none;
+}
+
+.quick-link-favicon {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+}
+
+.quick-link-letter {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.quick-link-button:has(.quick-link-favicon:not([hidden])) .quick-link-letter {
+  display: none;
+}
+
+.quick-link-label {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.quick-link-remove {
+  right: 1px;
+  top: -3px;
+  width: 17px;
+  height: 17px;
+}
+
+.quick-link-add {
+  color: var(--ink);
+}
+
+.quick-link-form,
+.quick-link-group-form {
+  gap: 6px;
+}
+
+.quick-link-input,
+.workspace-input,
+.archive-search {
+  border-radius: 6px;
+  background: var(--field-bg);
+  font-family: inherit;
+  box-shadow: none;
+}
+
+.quick-link-input:focus,
+.workspace-input:focus,
+.archive-search:focus,
+.open-tab-search-input:focus {
+  border-color: var(--ink);
+  background: var(--card-bg-strong);
+  box-shadow: 0 0 0 3px var(--ink-tint);
+}
+
+.quick-link-form-btn,
+.workspace-toolbar-btn,
+.workspace-form-btn,
+.workspace-action-btn {
+  border-radius: 6px;
+  font-family: inherit;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.quick-link-form-btn,
+.workspace-toolbar-btn,
+.workspace-form-btn {
+  font-size: 12px;
+}
+
+.workspace-action-btn {
+  font-size: 11px;
+}
+
+.quick-link-form-btn.primary,
+.workspace-toolbar-btn.primary,
+.workspace-form-btn.primary {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--accent-contrast);
+}
+
+/* Main information workspace. */
+.dashboard-columns {
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.dashboard-columns .active-section {
+  min-width: 0;
+}
+
+.deferred-column {
+  width: 272px;
+  top: 24px;
+  padding-left: 24px;
+  border-left: 1px solid var(--card-border);
+}
+
+.section-header {
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.section-header h2 {
+  color: var(--ink);
+  font-size: 15px;
+  font-style: normal;
+  font-weight: 650;
+}
+
+.section-line {
+  background: var(--card-border);
+}
+
+.section-count {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.open-tab-tools {
+  margin: 0 0 14px;
+}
+
+.open-tab-search-input {
+  height: 38px;
+  border-radius: 6px;
+  background: var(--field-bg);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 450;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.open-tab-search-status {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.missions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+  columns: auto;
+  margin-bottom: 32px;
+}
+
+.mission-card {
+  margin: 0;
+  padding: 14px;
+  gap: 0;
+  border-radius: 8px;
+  background: var(--card-bg-strong);
+  box-shadow: none;
+  cursor: default;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+
+.mission-card::before {
+  display: none;
+}
+
+.mission-card:hover {
+  border-color: var(--muted);
+  box-shadow: none;
+  transform: none;
+}
+
+.mission-top {
+  gap: 7px;
+  margin-bottom: 11px;
+}
+
+.mission-name {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.open-tabs-badge,
+.mission-tag,
+.timeline-node-status {
+  border-radius: 4px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.open-tabs-badge {
+  padding: 2px 6px;
+  background: var(--muted-tint);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.duplicate-badge,
+.chip-dupe-badge {
+  color: var(--status-abandoned);
+  background: var(--rose-wash);
+}
+
+.mission-pages {
+  gap: 0;
+  margin: 0 -6px;
+  border-top: 1px solid var(--row-divider-strong);
+}
+
+.page-chip {
+  min-height: 50px;
+  padding: 8px 6px;
+  border: 0;
+  border-bottom: 1px solid var(--row-divider-soft);
+  border-radius: 0;
+  background: transparent;
+  transition: background-color 0.12s ease;
+}
+
+.page-chip:last-child {
+  border-bottom-color: transparent;
+}
+
+.page-chip.clickable:hover {
+  border-color: var(--row-divider-soft);
+  background: var(--row-bg-hover);
+}
+
+.chip-favicon {
+  width: 17px;
+  height: 17px;
+  border-radius: 3px;
+}
+
+.chip-text {
+  font-size: 13px;
+  font-weight: 550;
+  -webkit-line-clamp: 1;
+}
+
+.chip-url {
+  font-size: 11px;
+  font-weight: 450;
+}
+
+.chip-action {
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease, background-color 0.12s ease;
+}
+
+.page-chip:hover .chip-action,
+.page-chip:focus-within .chip-action {
+  opacity: 0.7;
+}
+
+.actions {
+  gap: 6px;
+  margin: 10px -4px -4px;
+}
+
+.action-btn {
+  min-height: 28px;
+  padding: 4px 9px;
+  border-color: var(--card-border);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 550;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.action-btn.close-tabs {
+  border-color: var(--card-border);
+  background: transparent;
+  color: var(--muted);
+}
+
+.action-btn:hover,
+.action-btn.close-tabs:hover {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--accent-contrast);
+}
+
+.missions-search-empty {
+  border-radius: 8px;
+  background: transparent;
+}
+
+/* Analytics is a full-width data band. */
+.analytics-board {
+  margin: 4px 0 32px;
+  padding: 20px 0;
+  border-width: 1px 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.tab-pressure-high .analytics-board {
+  background: transparent;
+  box-shadow: none;
+}
+
+.analytics-heading {
+  margin-bottom: 16px;
+}
+
+.analytics-title svg {
+  color: var(--ink);
+}
+
+.analytics-title h2 {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.analytics-date,
+.analytics-label {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.analytics-date,
+.analytics-detail {
+  font-size: 11px;
+}
+
+.analytics-metric {
+  min-height: 62px;
+  padding: 4px 22px;
+}
+
+.analytics-value {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.analytics-label {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.analytics-progress {
+  height: 2px;
+  border-radius: 0;
+}
+
+.analytics-progress span {
+  border-radius: 0;
+  background: var(--ink);
+}
+
+/* Workspaces close the page as a structured collection. */
+.workspace-section {
+  margin: 0 0 28px;
+  padding: 24px 0 28px;
+  border-top: 1px solid var(--card-border);
+  border-bottom: 0;
+}
+
+.workspace-toolbar {
+  margin-bottom: 14px;
+}
+
+.workspace-heading > svg {
+  color: var(--ink);
+}
+
+.workspace-heading h2 {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.workspace-count {
+  font-size: 12px;
+}
+
+.workspace-list {
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 10px;
+}
+
+.workspace-card {
+  border-radius: 8px;
+  padding: 13px;
+  box-shadow: none;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+
+.workspace-card:hover {
+  border-color: var(--muted);
+  box-shadow: none;
+  transform: none;
+}
+
+.workspace-name {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.workspace-card-meta {
+  font-size: 11px;
+}
+
+.workspace-action-btn.primary {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--accent-contrast);
+}
+
+.workspace-action-btn.primary:hover,
+.workspace-action-btn.primary:focus-visible {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--accent-contrast);
+  opacity: 0.82;
+}
+
+/* Timeline keeps tree relationships visible without floating cards. */
+.timeline-view {
+  padding-top: 24px;
+}
+
+.timeline-view-header {
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.timeline-view-header h2 {
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 650;
+}
+
+.timeline-summary {
+  font-size: 13px;
+}
+
+.timeline-block-time {
+  font-size: 14px;
+}
+
+.timeline-block-count,
+.timeline-node-meta {
+  font-size: 11px;
+}
+
+.timeline-node-title {
+  font-size: 13px;
+}
+
+.timeline-node-status {
+  font-size: 10px;
+}
+
+.timeline-refresh-btn,
+.timeline-node-card {
+  box-shadow: none;
+}
+
+.timeline-node-card {
+  min-height: 44px;
+  border-radius: 6px;
+  background: var(--card-bg-strong);
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.timeline-node-card:hover,
+.timeline-node-card:focus-visible {
+  border-color: var(--muted);
+  background: var(--row-bg-hover);
+  box-shadow: none;
+  transform: none;
+}
+
+.timeline-block::before {
+  background: var(--ink);
+  box-shadow: 0 0 0 1px var(--card-border);
+}
+
+.timeline-expand-btn,
+.timeline-load-more {
+  border-radius: 6px;
+  font-family: inherit;
+}
+
+/* Banners and feedback use restrained borders instead of gradients. */
+.tab-cleanup-banner,
+.nudge-banner,
+.update-banner {
+  border-radius: 7px;
+  background: var(--card-bg-strong);
+  box-shadow: none;
+}
+
+.toast {
+  bottom: 24px;
+  border: 1px solid var(--card-border);
+  border-radius: 7px;
+  background: var(--ink);
+  color: var(--accent-contrast);
+  font-family: inherit;
+  font-size: 13px;
+  box-shadow: 0 12px 36px var(--toast-shadow);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+footer {
+  margin-top: 12px;
+  padding-top: 18px;
+}
+
+.stat-num {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.stat-label {
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.deferred-title {
+  font-size: 14px;
+}
+
+.deferred-meta {
+  font-size: 12px;
+}
+
+/* Remove decorative entrance motion; keep only state transitions. */
+header,
+.tab-cleanup-banner,
+.nudge-banner,
+.active-section .section-header,
+.active-section .missions .mission-card,
+.abandoned-section .section-header,
+.abandoned-section .missions .mission-card,
+footer,
+.deferred-column .section-header,
+.deferred-item,
+.missions-search-empty {
+  animation: none;
+}
+
+@media (hover: none) {
+  .chip-action {
+    opacity: 0.7;
+  }
+}
+
+@media (max-width: 960px) {
+  .dashboard-columns {
+    flex-direction: column;
+  }
+
+  .dashboard-columns .active-section {
+    width: 100%;
+  }
+
+  .deferred-column {
+    position: static;
+    width: 100%;
+    max-height: none;
+    padding: 24px 0 0;
+    border-top: 1px solid var(--card-border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .container,
+  .container:has(.dashboard-columns) {
+    padding: 20px 16px 40px;
+  }
+
+  header {
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .group-by-control {
+    justify-content: space-between;
+  }
+
+  .missions {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-metric,
+  .analytics-metric:first-child {
+    min-height: 0;
+    padding: 12px 0;
+    border-top: 1px solid var(--row-divider-strong);
+    border-left: 0;
+  }
+
+  .analytics-metric:first-child {
+    border-top: 0;
+  }
+
+  .workspace-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Tab Out</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+
+
+
+  <!-- ================================================================
+       HEADER — greeting on the left
+       ================================================================ -->
+  <header>
+    <div class="header-left">
+      <!-- "Good afternoon" — written by getGreeting() in app.js -->
+      <h1 id="greeting"></h1>
+      <!-- "Friday, April 4, 2026" — written by getDateDisplay() in app.js -->
+      <div class="date" id="dateDisplay"></div>
+    </div>
+    <div class="header-actions">
+      <div class="view-switcher" role="tablist" aria-label="页面视图">
+        <button class="view-switch-btn active" data-action="switch-view" data-view="dashboard" role="tab" aria-selected="true" aria-controls="dashboardView">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75h6.5v6.5h-6.5v-6.5Zm10 0h6.5v6.5h-6.5v-6.5Zm-10 10h6.5v6.5h-6.5v-6.5Zm10 0h6.5v6.5h-6.5v-6.5Z" /></svg>
+          标签看板
+        </button>
+        <button class="view-switch-btn" data-action="switch-view" data-view="timeline" role="tab" aria-selected="false" aria-controls="timelineView">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+          时间线
+        </button>
+      </div>
+      <div class="group-by-control" id="groupByControl">
+        <span class="group-by-label">分组方式</span>
+        <div class="group-by-switcher" role="group" aria-label="标签页分组方式">
+          <button class="group-by-btn active" data-action="switch-group-mode" data-group-mode="domain" aria-pressed="true">域名</button>
+          <button class="group-by-btn" data-action="switch-group-mode" data-group-mode="type" aria-pressed="false">类型</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-view" id="dashboardView" role="tabpanel">
+
+  <!-- ================================================================
+       QUICK LINKS — user-managed favorite sites
+      ================================================================ -->
+  <section class="quick-links-section favorites-section dashboard-panel" id="quickLinksSection" aria-label="常用标签页">
+    <div class="favorites-command-row">
+      <div class="quick-link-group-toolbar">
+        <div class="quick-link-group-tabs" id="quickLinkGroupTabs" role="tablist" aria-label="常用标签页分类"></div>
+      </div>
+      <div class="quick-link-group-actions favorites-toolbar" aria-label="常用标签页工具栏">
+        <button class="quick-link-group-action" type="button" data-action="import-quick-links" title="导入常用标签页" aria-label="导入常用标签页">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0 4-4m-4 4-4-4M5 17.25v1.5A2.25 2.25 0 0 0 7.25 21h9.5A2.25 2.25 0 0 0 19 18.75v-1.5" /></svg>
+          <span>导入</span>
+        </button>
+        <button class="quick-link-group-action" type="button" data-action="export-quick-links" title="导出常用标签页" aria-label="导出常用标签页">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15V3m0 0 4 4m-4-4L8 7M5 13.5v5.25A2.25 2.25 0 0 0 7.25 21h9.5A2.25 2.25 0 0 0 19 18.75V13.5" /></svg>
+          <span>导出</span>
+        </button>
+        <button class="quick-link-group-action primary" type="button" data-action="show-quick-link-form" title="添加网站" aria-label="添加网站">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m7-7H5" /></svg>
+          <span>添加</span>
+        </button>
+        <button class="quick-link-group-action" type="button" id="renameQuickLinkGroupButton" data-action="show-quick-link-group-rename" title="编辑当前分组" aria-label="编辑当前分组">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" /></svg>
+          <span>编辑</span>
+        </button>
+        <button class="quick-link-group-action danger" type="button" id="deleteQuickLinkGroupButton" data-action="delete-quick-link-group" title="删除当前分组" aria-label="删除当前分组">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673A2.25 2.25 0 0 1 15.916 21H8.084a2.25 2.25 0 0 1-2.244-1.327L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0V4.477c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916" /></svg>
+          <span>删除</span>
+        </button>
+        <input id="quickLinkImportInput" type="file" accept="application/json,.json" hidden>
+      </div>
+    </div>
+
+    <form class="quick-link-group-form" id="quickLinkGroupForm" data-mode="create" hidden>
+      <input class="quick-link-input" id="quickLinkGroupName" type="text" autocomplete="off" maxlength="30" placeholder="分组名称" aria-label="分组名称" required>
+      <button class="quick-link-form-btn primary" type="submit">保存</button>
+      <button class="quick-link-form-btn" type="button" data-action="cancel-quick-link-group-form">取消</button>
+    </form>
+
+    <div class="quick-links-strip favorites-grid" id="quickLinksStrip" role="list"></div>
+  </section>
+
+  <!-- ================================================================
+       TAB OUT DUPES BANNER — appears when you have extra Tab Out tabs open
+       Hidden by default; app.js shows it when dupeTabOutCount > 1
+       ================================================================ -->
+  <div class="tab-cleanup-banner" id="tabOutDupeBanner" style="display:none">
+    <div class="tab-cleanup-left">
+      <div class="tab-cleanup-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+        </svg>
+      </div>
+      <div class="tab-cleanup-text">
+        当前打开了 <strong id="tabOutDupeCount"></strong> 个 Tab Out 页面，是否只保留当前页面？
+      </div>
+    </div>
+    <button class="tab-cleanup-btn" data-action="close-tabout-dupes">关闭多余页面</button>
+  </div>
+
+  <!-- ================================================================
+       MAIN CONTENT AREA — two-column layout
+       Left: open tabs (domain/mission cards)
+       Right: saved for later checklist
+       The right column only renders when it has items (JS controls this)
+       ================================================================ -->
+  <div class="dashboard-columns" id="dashboardColumns">
+
+    <!-- LEFT COLUMN: Open tabs -->
+    <div class="active-section dashboard-panel" id="openTabsSection" style="display:none">
+      <div class="section-header">
+        <h2 id="openTabsSectionTitle">已打开标签页</h2>
+        <div class="section-line"></div>
+        <div class="section-count" id="openTabsSectionCount"></div>
+      </div>
+      <div class="open-tab-tools">
+        <div class="open-tab-search">
+          <svg class="open-tab-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+          <input id="openTabsSearch" class="open-tab-search-input" type="search" autocomplete="off" spellcheck="false" aria-label="搜索已打开标签页" placeholder="搜索标题、域名或网址">
+          <button class="open-tab-search-clear" id="openTabsSearchClear" data-action="clear-open-tab-search" title="清除搜索" aria-label="清除搜索">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.25" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="open-tab-search-status" id="openTabsSearchStatus"></div>
+      </div>
+      <div class="missions" id="openTabsMissions"></div>
+      <div class="missions-search-empty" id="openTabsSearchEmpty" style="display:none">
+        <div class="empty-title">没有匹配的标签页</div>
+        <div class="empty-subtitle">请尝试搜索标题、域名或网址片段。</div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Saved for Later checklist -->
+    <div class="deferred-column" id="deferredColumn" style="display:none">
+      <div class="section-header">
+        <h2>稍后查看</h2>
+        <div class="section-line"></div>
+        <div class="section-count" id="deferredCount"></div>
+      </div>
+
+      <!-- Active checklist items — injected by renderDeferredList() in app.js -->
+      <div class="deferred-list" id="deferredList"></div>
+
+      <!-- Empty state — shown when no active deferred tabs -->
+      <div class="deferred-empty" id="deferredEmpty" style="display:none">
+        暂无保存内容。
+      </div>
+
+      <!-- Archive section — collapsed by default -->
+      <div class="deferred-archive" id="deferredArchive" style="display:none">
+        <button class="archive-toggle" id="archiveToggle">
+          <svg class="archive-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+          归档
+          <span class="archive-count" id="archiveCount"></span>
+        </button>
+        <div class="archive-body" id="archiveBody" style="display:none">
+          <input type="text" class="archive-search" id="archiveSearch" placeholder="搜索已归档标签页">
+          <div class="archive-list" id="archiveList"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end .dashboard-columns -->
+
+
+  <!-- ================================================================
+       TAB ANALYTICS — local cleanup achievements
+       ================================================================ -->
+  <section class="analytics-board dashboard-panel" id="analyticsBoard" aria-label="标签页清理统计">
+    <div class="analytics-heading">
+      <div class="analytics-title">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m9.813 15.904-.778 2.296-.778-2.296a4.968 4.968 0 0 0-3.152-3.152l-2.296-.778 2.296-.778a4.968 4.968 0 0 0 3.152-3.152l.778-2.296.778 2.296a4.968 4.968 0 0 0 3.152 3.152l2.296.778-2.296.778a4.968 4.968 0 0 0-3.152 3.152ZM18.259 8.715l-.212.624-.211-.624a2.25 2.25 0 0 0-1.426-1.426l-.624-.211.624-.212a2.25 2.25 0 0 0 1.426-1.426l.211-.624.212.624a2.25 2.25 0 0 0 1.426 1.426l.624.212-.624.211a2.25 2.25 0 0 0-1.426 1.426ZM16.894 20.567l-.15.442-.149-.442a1.5 1.5 0 0 0-.95-.95l-.442-.149.442-.15a1.5 1.5 0 0 0 .95-.95l.149-.442.15.442a1.5 1.5 0 0 0 .95.95l.442.15-.442.149a1.5 1.5 0 0 0-.95.95Z" /></svg>
+        <h2>今日清理</h2>
+      </div>
+      <span class="analytics-date" id="analyticsDate"></span>
+    </div>
+
+    <div class="analytics-metrics">
+      <div class="analytics-metric">
+        <span class="analytics-value" id="analyticsClosedTabs">0</span>
+        <span class="analytics-label">已关闭标签页</span>
+      </div>
+      <div class="analytics-metric">
+        <span class="analytics-value" id="analyticsMemory">0 MB</span>
+        <span class="analytics-label" title="按每个标签页 50 MB 估算">预计释放内存</span>
+      </div>
+      <div class="analytics-metric duplicate-metric">
+        <div class="analytics-value-row">
+          <span class="analytics-value" id="analyticsDuplicateRate">0%</span>
+          <span class="analytics-detail" id="analyticsDuplicateDetail">0 个重复项</span>
+        </div>
+        <div class="analytics-progress" aria-hidden="true"><span id="analyticsDuplicateBar"></span></div>
+        <span class="analytics-label">当前重复率</span>
+      </div>
+    </div>
+
+    <div class="tab-pressure-warning" id="tabPressureWarning" hidden>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9.303 3.376c.866 1.5-.217 3.374-1.948 3.374H4.645c-1.73 0-2.813-1.874-1.948-3.374L10.052 3.38c.866-1.5 3.03-1.5 3.896 0l7.355 12.746ZM12 16.5h.008v.008H12V16.5Z" /></svg>
+      <span id="tabPressureMessage"></span>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       WORKSPACES — saved window snapshots
+       ================================================================ -->
+  <section class="workspace-section dashboard-panel" id="workspaceSection" aria-label="工作空间">
+    <div class="workspace-toolbar">
+      <div class="workspace-heading">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75A2.25 2.25 0 0 1 6 4.5h12a2.25 2.25 0 0 1 2.25 2.25v7.5A2.25 2.25 0 0 1 18 16.5H6a2.25 2.25 0 0 1-2.25-2.25v-7.5Z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 19.5h10.5" />
+        </svg>
+        <h2>工作空间</h2>
+        <span class="workspace-count" id="workspaceCount"></span>
+      </div>
+      <div class="workspace-toolbar-actions">
+        <button class="workspace-toolbar-btn primary" data-action="show-workspace-form">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m7-7H5" /></svg>
+          保存当前窗口
+        </button>
+        <button class="workspace-toolbar-btn icon-only" data-action="import-workspaces" title="导入工作空间" aria-label="导入工作空间">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0 4-4m-4 4-4-4M5 17.25v1.5A2.25 2.25 0 0 0 7.25 21h9.5A2.25 2.25 0 0 0 19 18.75v-1.5" /></svg>
+        </button>
+        <button class="workspace-toolbar-btn icon-only" data-action="export-workspaces" title="导出工作空间" aria-label="导出工作空间">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15V3m0 0 4 4m-4-4L8 7M5 13.5v5.25A2.25 2.25 0 0 0 7.25 21h9.5A2.25 2.25 0 0 0 19 18.75V13.5" /></svg>
+        </button>
+        <input id="workspaceImportInput" type="file" accept="application/json,.json" hidden>
+      </div>
+    </div>
+
+    <form class="workspace-create-form" id="workspaceCreateForm" hidden>
+      <input class="workspace-input" id="workspaceNameInput" type="text" autocomplete="off" maxlength="80" placeholder="工作空间名称" aria-label="工作空间名称" required>
+      <button class="workspace-form-btn primary" type="submit">保存</button>
+      <button class="workspace-form-btn" type="button" data-action="cancel-workspace-form">取消</button>
+    </form>
+
+    <div class="workspace-list" id="workspaceList"></div>
+  </section>
+
+
+  <!-- ================================================================
+       FOOTER — global stats + refresh control
+       ================================================================ -->
+  <footer>
+    <div class="footer-stats">
+      <div class="stat">
+        <div class="stat-num" id="statTabs">—</div>
+        <div class="stat-label">已打开标签页</div>
+      </div>
+    </div>
+    <div class="last-refresh">
+      <span><a class="footer-link" href="https://github.com/zarazhangrui/tab-out" target="_top">Tab Out</a> · <a class="footer-link" href="https://x.com/zarazhangrui" target="_top">Zara</a></span>
+    </div>
+  </footer>
+  </main>
+
+  <main class="app-view timeline-view dashboard-panel" id="timelineView" role="tabpanel" hidden>
+    <div class="timeline-view-header">
+      <div>
+        <h2>浏览时间线</h2>
+        <div class="timeline-summary" id="timelineSummary">正在加载最近活动...</div>
+      </div>
+      <button class="timeline-refresh-btn" data-action="refresh-timeline" title="刷新时间线" aria-label="刷新时间线">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356m-.985 12.663a9 9 0 1 1 .674-9.352L21.015 9.348" /></svg>
+      </button>
+    </div>
+    <div class="timeline-container" id="timelineContainer"></div>
+    <div class="timeline-empty" id="timelineEmpty" hidden>
+      <div class="empty-title">暂无最近浏览活动</div>
+      <div class="empty-subtitle">本地浏览历史会按会话显示在这里。</div>
+    </div>
+  </main>
+
+</div><!-- end .container -->
+
+<button
+  class="timeline-back-to-top"
+  id="timelineBackToTop"
+  type="button"
+  data-action="scroll-timeline-top"
+  title="回到顶部"
+  aria-label="回到页面顶部"
+  aria-hidden="true"
+  tabindex="-1"
+>
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+  </svg>
+</button>
+
+<dialog class="favorite-dialog" id="quickLinkDialog" aria-labelledby="quickLinkDialogTitle">
+  <form class="favorite-editor" id="quickLinkForm" data-mode="create">
+    <div class="favorite-editor-header">
+      <div>
+        <h2 id="quickLinkDialogTitle">添加网站</h2>
+        <p id="quickLinkDialogSubtitle">创建新的快捷方式</p>
+      </div>
+      <button class="favorite-editor-close" type="button" data-action="cancel-quick-link" title="关闭" aria-label="关闭编辑窗口">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+    <div class="favorite-editor-fields">
+      <label class="favorite-field favorite-field-wide">
+        <span>网址</span>
+        <input class="quick-link-input" id="quickLinkUrl" type="text" inputmode="url" autocomplete="url" placeholder="https://example.com" required>
+      </label>
+      <label class="favorite-field">
+        <span>网站名称</span>
+        <input class="quick-link-input" id="quickLinkName" type="text" autocomplete="off" maxlength="80" placeholder="例如：DeepSeek 开放平台">
+      </label>
+      <label class="favorite-field">
+        <span>分组</span>
+        <select class="quick-link-input" id="quickLinkGroupId" aria-label="常用标签页分组"></select>
+      </label>
+      <label class="favorite-field favorite-field-wide">
+        <span>描述</span>
+        <input class="quick-link-input" id="quickLinkDescription" type="text" autocomplete="off" maxlength="100" placeholder="例如：API 服务平台">
+      </label>
+      <label class="favorite-field">
+        <span>Badge</span>
+        <input class="quick-link-input" id="quickLinkBadge" type="text" autocomplete="off" maxlength="16" placeholder="例如：API">
+      </label>
+      <label class="favorite-field favorite-color-field">
+        <span>品牌色</span>
+        <input id="quickLinkColor" type="color" value="#65758b" aria-label="品牌色">
+      </label>
+    </div>
+    <div class="favorite-editor-actions">
+      <button class="quick-link-form-btn" type="button" data-action="cancel-quick-link">取消</button>
+      <button class="quick-link-form-btn primary" id="quickLinkSubmitButton" type="submit">添加网站</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="quick-link-picker" id="quickLinkPicker" role="dialog" aria-label="添加到常用标签页" hidden>
+  <div class="quick-link-picker-heading">
+    <span>添加到分组</span>
+    <span class="quick-link-picker-title" id="quickLinkPickerTitle"></span>
+  </div>
+  <div class="quick-link-picker-groups" id="quickLinkPickerGroups"></div>
+  <button class="quick-link-picker-create" type="button" data-action="show-quick-link-picker-group-form">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m7-7H5" /></svg>
+    新建分组
+  </button>
+  <form class="quick-link-picker-form" id="quickLinkPickerGroupForm" hidden>
+    <input id="quickLinkPickerGroupName" type="text" autocomplete="off" maxlength="30" placeholder="分组名称" aria-label="新分组名称" required>
+    <button type="submit">创建并添加</button>
+  </form>
+</div>
+
+<!-- ================================================================
+     TOAST — floats above everything, used for action confirmations
+     Hidden by default via CSS (opacity:0, translateY)
+     ================================================================ -->
+<div class="toast" id="toast">
+  <!-- Checkmark circle icon (Heroicons outline) -->
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+  </svg>
+  <span id="toastText"></span>
+  <button class="toast-action" id="toastAction" type="button" data-action="toast-action" hidden></button>
+</div>
+
+<!-- Personal config (gitignored) — defines LOCAL_LANDING_PAGE_PATTERNS etc. -->
+<!-- If the file doesn't exist, that's fine — app.js uses sensible defaults. -->
+<script src="config.local.js"></script>
+
+<!-- Category labels remain in the UI; classification runs in the Service Worker -->
+<script src="constants/siteCategories.js"></script>
+<script src="services/backgroundClient.js"></script>
+<script src="favorites/favorites-metadata.js"></script>
+<script src="favorites/favorites-renderer.js"></script>
+
+<!-- Main dashboard logic — loads last so the DOM is ready -->
+<script src="app.js"></script>
+</body>
+</html>

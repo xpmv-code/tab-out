@@ -1,0 +1,638 @@
+/* ---- Mission Cards ---- */
+.missions {
+  columns: 280px;
+  column-gap: 12px;
+  margin-bottom: 40px;
+}
+
+.mission-card {
+  background: var(--card-bg-strong);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 17px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 1px 0 var(--shadow);
+  transition: border-color 0.2s ease, box-shadow 0.25s ease, transform 0.25s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  break-inside: avoid;       /* don't split a card across columns */
+  margin-bottom: 12px;       /* vertical spacing (replaces grid gap) */
+}
+
+/* Colored top border instead of side bar for grid cards */
+.mission-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--warm-gray);
+}
+
+.mission-card.has-active-bar::before { background: var(--status-active); }
+.mission-card.has-amber-bar::before { background: var(--accent-amber); }
+.mission-card.has-neutral-bar::before { background: var(--warm-gray); }
+
+.mission-card:hover {
+  border-color: var(--accent-amber);
+  box-shadow: 0 8px 28px var(--shadow);
+  transform: translateY(-1px);
+}
+
+/* Closing animation — card scales down and fades out */
+.mission-card.closing {
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+.mission-card.collapsed {
+  display: none !important;
+}
+
+/* Old side status bar — hidden, replaced by top border via ::before */
+.status-bar {
+  display: none;
+}
+
+.mission-content {
+  min-width: 0;
+}
+
+/* Hide the right-side meta (page count) — info is already in the badge */
+.mission-meta {
+  display: none;
+}
+
+.mission-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.mission-name {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--ink);
+  letter-spacing: 0;
+}
+
+.mission-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.mission-tag.active {
+  color: var(--status-active);
+  background: var(--active-tint);
+}
+
+.mission-tag.cooling {
+  color: var(--status-cooling);
+  background: var(--cooling-tint);
+}
+
+.mission-tag.abandoned {
+  color: var(--status-abandoned);
+  background: var(--rose-wash-strong);
+}
+
+/* Tab indicator badge — shows how many Chrome tabs are still open for this mission */
+.open-tabs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--accent-amber);
+  background: var(--amber-tint);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.open-tabs-badge svg {
+  width: 10px;
+  height: 10px;
+}
+
+.mission-summary {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.mission-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* ---- Tab row — each tab is a full-width row with favicon, title, and actions ---- */
+.page-chip {
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--row-bg);
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--row-divider);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.page-chip:last-child,
+.page-chip-overflow {
+  border-color: transparent;
+}
+
+/* Favicon */
+.chip-favicon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+.chip-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Title text — wraps naturally, no truncation */
+.chip-text {
+  color: var(--ink);
+  font-weight: 600;
+  /* Show up to 2 lines, then ellipsis */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.chip-url {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Duplicate badge */
+.chip-dupe-badge {
+  color: var(--accent-amber);
+  font-weight: 600;
+}
+
+/* Duplicate border highlight */
+.chip-has-dupes {
+  border-color: var(--amber-highlight);
+}
+
+/* Action buttons grouped on the right */
+.chip-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ---- Chip action buttons (save + close) ---- */
+.chip-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  opacity: 0.35;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.chip-action svg {
+  width: 15px;
+  height: 15px;
+}
+
+.chip-action:hover {
+  opacity: 1;
+  background: var(--muted-tint);
+}
+
+.chip-save:hover {
+  color: var(--accent-sage);
+  background: var(--sage-wash-strong);
+}
+
+.chip-favorite svg {
+  fill: none;
+}
+
+.chip-favorite:hover,
+.chip-favorite.is-favorite {
+  color: var(--ink);
+  background: var(--muted-tint);
+}
+
+.chip-favorite.is-favorite {
+  opacity: 0.9;
+}
+
+.chip-favorite.is-favorite svg {
+  fill: currentColor;
+}
+
+.chip-close:hover {
+  color: var(--status-abandoned);
+  background: var(--rose-wash-strong);
+}
+
+.quick-link-picker {
+  position: fixed;
+  z-index: 5000;
+  width: min(270px, calc(100vw - 24px));
+  max-height: min(420px, calc(100vh - 24px));
+  overflow: auto;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--card-bg-strong);
+  color: var(--ink);
+  padding: 8px;
+  box-shadow: 0 14px 38px var(--shadow);
+}
+
+.quick-link-picker[hidden],
+.quick-link-picker-form[hidden] {
+  display: none;
+}
+
+.quick-link-picker-heading {
+  min-width: 0;
+  padding: 4px 6px 8px;
+  border-bottom: 1px solid var(--row-divider-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.quick-link-picker-title {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-link-picker-groups {
+  display: flex;
+  flex-direction: column;
+  padding: 5px 0;
+}
+
+.quick-link-picker-group,
+.quick-link-picker-create {
+  width: 100%;
+  min-height: 36px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+}
+
+.quick-link-picker-group:hover,
+.quick-link-picker-group:focus-visible,
+.quick-link-picker-create:hover,
+.quick-link-picker-create:focus-visible {
+  background: var(--row-bg-hover);
+  outline: none;
+}
+
+.quick-link-picker-count {
+  min-width: 22px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.quick-link-picker-create {
+  justify-content: flex-start;
+  border-top: 1px solid var(--row-divider-soft);
+  border-radius: 0 0 5px 5px;
+  color: var(--muted);
+}
+
+.quick-link-picker-create svg {
+  width: 16px;
+  height: 16px;
+}
+
+.quick-link-picker-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  padding: 7px 0 0;
+  border-top: 1px solid var(--row-divider-soft);
+}
+
+.quick-link-picker-form input,
+.quick-link-picker-form button {
+  height: 34px;
+  border: 1px solid var(--card-border);
+  border-radius: 5px;
+  background: var(--field-bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+}
+
+.quick-link-picker-form input {
+  min-width: 0;
+  padding: 0 9px;
+  outline: none;
+}
+
+.quick-link-picker-form input:focus {
+  border-color: var(--ink);
+}
+
+.quick-link-picker-form button {
+  cursor: pointer;
+  padding: 0 9px;
+  background: var(--ink);
+  color: var(--accent-contrast);
+}
+
+.page-chip.clickable {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.page-chip.clickable:hover {
+  background: var(--row-bg-hover);
+  border-color: var(--amber-border);
+}
+
+/* "+N more" overflow chip */
+.page-chip-overflow {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 4px;
+  justify-content: center;
+  background: transparent;
+  border: 1px dashed var(--row-divider-strong);
+}
+
+/* mission-meta hidden — see above */
+
+.mission-time {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.mission-page-count {
+  font-size: 20px;
+  font-family: 'Newsreader', serif;
+  font-weight: 300;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.mission-page-label {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ---- Actions row ---- */
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.action-btn {
+  font-size: 11px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--warm-gray);
+  background: var(--card-bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.action-btn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.action-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.action-btn.compact {
+  font-size: 11px;
+  padding: 3px 10px;
+}
+
+.action-btn.primary {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+.action-btn.primary:hover {
+  opacity: 0.85;
+}
+
+.action-btn.close-tabs {
+  border-color: var(--amber-border-strong);
+  color: var(--accent-amber);
+  background: var(--amber-wash);
+}
+
+.action-btn.close-tabs:hover {
+  background: var(--amber-tint);
+  border-color: var(--accent-amber);
+}
+
+.action-btn.save-tabs {
+  border-color: var(--sage-border-strong);
+  color: var(--accent-sage);
+  background: var(--sage-wash);
+}
+
+.action-btn.save-tabs:hover {
+  background: var(--sage-tint);
+  border-color: var(--accent-sage);
+}
+
+.action-btn.danger {
+  color: var(--status-abandoned);
+}
+
+.action-btn.danger:hover {
+  border-color: var(--status-abandoned);
+  color: var(--status-abandoned);
+}
+
+/* ---- Toast notification ---- */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 12px 24px;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px var(--toast-shadow);
+  z-index: 100;
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast svg {
+  width: 16px;
+  height: 16px;
+  color: var(--status-active);
+}
+
+/* ---- Footer ---- */
+footer {
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 1px solid var(--warm-gray);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-stats {
+  display: flex;
+  gap: 32px;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-num {
+  font-family: 'Newsreader', serif;
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--ink);
+  line-height: 1;
+  transition: all 0.3s;
+}
+
+.stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.last-refresh {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.footer-link {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.refresh-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent-amber);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ---- Animations ---- */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+header { animation: fadeUp 0.5s ease both; }
+.tab-cleanup-banner { animation: fadeUp 0.5s ease 0.1s both; }
+.nudge-banner { animation: fadeUp 0.5s ease 0.15s both; }
+.active-section .section-header { animation: fadeUp 0.5s ease 0.2s both; }
+.active-section .missions .mission-card:nth-child(1) { animation: fadeUp 0.4s ease 0.25s both; }
+.active-section .missions .mission-card:nth-child(2) { animation: fadeUp 0.4s ease 0.3s both; }
+.active-section .missions .mission-card:nth-child(3) { animation: fadeUp 0.4s ease 0.35s both; }
+.active-section .missions .mission-card:nth-child(4) { animation: fadeUp 0.4s ease 0.4s both; }
+.abandoned-section .section-header { animation: fadeUp 0.5s ease 0.45s both; }
+.abandoned-section .missions .mission-card:nth-child(1) { animation: fadeUp 0.4s ease 0.5s both; }
+.abandoned-section .missions .mission-card:nth-child(2) { animation: fadeUp 0.4s ease 0.55s both; }
+.abandoned-section .missions .mission-card:nth-child(3) { animation: fadeUp 0.4s ease 0.6s both; }
+footer { animation: fadeUp 0.5s ease 0.65s both; }
+
+.deferred-list .deferred-item:nth-child(1) { animation-delay: 0.05s; }
+.deferred-list .deferred-item:nth-child(2) { animation-delay: 0.1s; }
+.deferred-list .deferred-item:nth-child(3) { animation-delay: 0.15s; }
+.deferred-list .deferred-item:nth-child(4) { animation-delay: 0.2s; }
+.deferred-list .deferred-item:nth-child(5) { animation-delay: 0.25s; }
+.deferred-column .section-header { animation: fadeUp 0.5s ease 0.1s both; }
+
+

@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Out",
+  "version": "1.0.0",
+  "description": "本地优先管理已打开标签页，支持按域名或网站类型分组、搜索、去重和工作空间。",
+  "permissions": ["tabs", "activeTab", "storage", "history", "favicon"],
+  "host_permissions": ["https://api.deepseek.com/*"],
+  "chrome_url_overrides": { "newtab": "index.html" },
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_title": "Tab Out",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
