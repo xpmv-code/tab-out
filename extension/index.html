@@ -268,9 +268,20 @@
 
   <main class="app-view timeline-view dashboard-panel" id="timelineView" role="tabpanel" hidden>
     <div class="timeline-view-header">
-      <div>
+      <div class="timeline-heading">
         <h2>浏览时间线</h2>
         <div class="timeline-summary" id="timelineSummary">正在加载最近活动...</div>
+      </div>
+      <div class="timeline-search" role="search">
+        <svg class="timeline-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m1.35-5.4a6.75 6.75 0 1 1-13.5 0 6.75 6.75 0 0 1 13.5 0Z" />
+        </svg>
+        <input id="timelineSearch" class="timeline-search-input" type="search" autocomplete="off" spellcheck="false" aria-label="搜索浏览时间线" placeholder="搜索标题、域名或网址">
+        <button class="timeline-search-clear" id="timelineSearchClear" type="button" data-action="clear-timeline-search" title="清除搜索" aria-label="清除时间线搜索" hidden>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
       <button class="timeline-refresh-btn" data-action="refresh-timeline" title="刷新时间线" aria-label="刷新时间线">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356m-.985 12.663a9 9 0 1 1 .674-9.352L21.015 9.348" /></svg>
@@ -280,6 +291,11 @@
     <div class="timeline-empty" id="timelineEmpty" hidden>
       <div class="empty-title">暂无最近浏览活动</div>
       <div class="empty-subtitle">本地浏览历史会按会话显示在这里。</div>
+    </div>
+    <div class="timeline-empty timeline-search-empty" id="timelineSearchEmpty" hidden>
+      <div class="empty-title">未找到匹配的时间线记录</div>
+      <div class="empty-subtitle">尝试其他关键词，或清除搜索查看完整时间线。</div>
+      <button class="timeline-search-empty-clear" type="button" data-action="clear-timeline-search">清除搜索</button>
     </div>
   </main>
 
@@ -382,6 +398,7 @@
 <script src="services/backgroundClient.js"></script>
 <script src="favorites/favorites-metadata.js"></script>
 <script src="favorites/favorites-renderer.js"></script>
+<script src="timeline-search.js"></script>
 
 <!-- Main dashboard logic — loads last so the DOM is ready -->
 <script src="app.js"></script>

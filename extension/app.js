@@ -1425,6 +1425,7 @@ const FRIENDLY_DOMAINS = {
 function friendlyDomain(hostname) {
   if (!hostname) return '';
   if (FRIENDLY_DOMAINS[hostname]) return FRIENDLY_DOMAINS[hostname];
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname)) return hostname;
 
   if (hostname.endsWith('.substack.com') && hostname !== 'substack.com') {
     return capitalize(hostname.replace('.substack.com', '')) + ' 的 Substack';
@@ -1670,6 +1671,30 @@ function getTimelineNodeFavicon(record) {
   return getLocalFaviconUrl(record.url, 32);
 }
 
+function highlightTimelineSearchText(value, searchMatch, field) {
+  const text = String(value || '');
+  if (!searchMatch?.isMatch || !searchMatch.matchedFields?.includes(field)) {
+    return escapeHtml(text);
+  }
+
+  const tokens = [...new Set(searchMatch.tokens || [])]
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length)
+    .map(token => token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (tokens.length === 0) return escapeHtml(text);
+
+  const pattern = new RegExp(`(?:${tokens.join('|')})`, 'gi');
+  let html = '';
+  let lastIndex = 0;
+  for (const match of text.matchAll(pattern)) {
+    const index = match.index ?? 0;
+    html += escapeHtml(text.slice(lastIndex, index));
+    html += `<mark class="timeline-search-mark">${escapeHtml(match[0])}</mark>`;
+    lastIndex = index + match[0].length;
+  }
+  return html + escapeHtml(text.slice(lastIndex));
+}
+
 function getOpenTabByUrlMap(tabs) {
   const map = new Map();
   for (const tab of tabs || []) {
@@ -1682,6 +1707,7 @@ function getOpenTabByUrlMap(tabs) {
 
 function renderTimelineNode(record, currentTab = null) {
   const activeTab = currentTab || (record.source === 'tab' ? record : null);
+  const searchContext = Boolean(record.searchMatch?.isContext);
   const hostname = record.hostname || getTabHostname(record.url).replace(/^www\./, '');
   const faviconUrl = getTimelineNodeFavicon({ ...record, favIconUrl: activeTab?.favIconUrl || record.favIconUrl });
   const safeUrl = escapeAttr(record.url || '');
@@ -1689,20 +1715,28 @@ function renderTimelineNode(record, currentTab = null) {
   const tabId = activeTab?.id ?? '';
   const windowId = activeTab?.windowId ?? '';
   const visitTime = record.lastVisitTime ? formatTimelineClock(record.lastVisitTime) : '';
+  const displayTitle = record.title || record.url || '未命名页面';
+  const displayDomain = hostname || getReadableUrl(record.url);
+  const titleHtml = highlightTimelineSearchText(displayTitle, record.searchMatch, 'title');
+  const domainHtml = highlightTimelineSearchText(displayDomain, record.searchMatch, 'hostname');
+  const urlHintHtml = record.searchMatch?.urlHint
+    ? `<span class="timeline-node-url-hint">${highlightTimelineSearchText(record.searchMatch.urlHint, record.searchMatch, 'url')}</span>`
+    : '';
 
   return `
-    <button class="timeline-node-card${activeTab ? ' current-tab' : ''}${record.orphanedOpener || record.cyclePrevented ? ' orphan-root' : ''}" data-action="open-timeline-node" data-tab-id="${escapeAttr(tabId)}" data-window-id="${escapeAttr(windowId)}" data-node-url="${safeUrl}" title="${safeTitle}">
+    <button class="timeline-node-card${activeTab ? ' current-tab' : ''}${record.orphanedOpener || record.cyclePrevented ? ' orphan-root' : ''}${searchContext ? ' search-context' : ''}" data-action="open-timeline-node" data-tab-id="${escapeAttr(tabId)}" data-window-id="${escapeAttr(windowId)}" data-node-url="${safeUrl}" title="${safeTitle}">
       ${faviconUrl
         ? `<img class="timeline-node-favicon" src="${escapeAttr(faviconUrl)}" data-fallback="${escapeAttr(getTimelineNodeInitial(record))}" alt="">`
         : `<span class="timeline-node-fallback">${escapeHtml(getTimelineNodeInitial(record))}</span>`}
       <span class="timeline-node-content">
-        <span class="timeline-node-title">${escapeHtml(record.title || record.url || '未命名页面')}</span>
+        <span class="timeline-node-title">${titleHtml}</span>
         <span class="timeline-node-meta">
-          <span class="timeline-node-domain">${escapeHtml(hostname || getReadableUrl(record.url))}</span>
+          <span class="timeline-node-domain">${domainHtml}</span>
           ${visitTime ? `<span class="timeline-node-time">${escapeHtml(visitTime)}</span>` : ''}
         </span>
+        ${urlHintHtml}
       </span>
-      <span class="timeline-node-status">${record.orphanedOpener || record.cyclePrevented ? '根节点' : (activeTab ? '已打开' : '历史记录')}</span>
+      <span class="timeline-node-status">${searchContext ? '上下文' : (record.orphanedOpener || record.cyclePrevented ? '根节点' : (activeTab ? '已打开' : '历史记录'))}</span>
     </button>`;
 }
 
@@ -1764,46 +1798,82 @@ function renderTimelineSessionBlock(block, openTabMap, renderState) {
     </section>`;
 }
 
+function getTimelineSearchQuery() {
+  return timelineSearchQuery.trim();
+}
+
+function syncTimelineSearchControls() {
+  const input = document.getElementById('timelineSearch');
+  const clearButton = document.getElementById('timelineSearchClear');
+  if (input && input.value !== timelineSearchQuery) input.value = timelineSearchQuery;
+  if (clearButton) clearButton.hidden = !getTimelineSearchQuery();
+}
+
+function clearTimelineSearch() {
+  timelineSearchQuery = '';
+  const input = document.getElementById('timelineSearch');
+  if (input) input.value = '';
+  if (timelineSnapshot) paintTimelineSnapshot(timelineSnapshot);
+  input?.focus();
+}
+
 function paintTimelineSnapshot(snapshot) {
   const container = document.getElementById('timelineContainer');
   const empty = document.getElementById('timelineEmpty');
+  const searchEmpty = document.getElementById('timelineSearchEmpty');
   const summary = document.getElementById('timelineSummary');
   if (!container || !snapshot) return;
 
+  const query = getTimelineSearchQuery();
+  const searchResult = query && globalThis.TabOutTimelineSearch?.searchTimeline
+    ? globalThis.TabOutTimelineSearch.searchTimeline(snapshot, query, { limit: timelineSearchNodeLimit })
+    : null;
+  const displaySnapshot = searchResult
+    ? { ...snapshot, tabTree: searchResult.tabTree, sessions: searchResult.sessions }
+    : snapshot;
   const openTabMap = getOpenTabByUrlMap(snapshot.tabs);
   const blocks = [];
   const renderState = {
-    limit: timelineNodeLimit,
+    limit: searchResult ? Number.POSITIVE_INFINITY : timelineNodeLimit,
     processed: 0,
     rendered: 0,
     hidden: 0,
   };
 
-  if (snapshot.tabTree.length > 0) {
-    const openTree = renderTimelineTree(snapshot.tabTree, renderState);
+  if (displaySnapshot.tabTree.length > 0) {
+    const openTree = renderTimelineTree(displaySnapshot.tabTree, renderState);
     blocks.push(`
       <section class="timeline-block open-now">
         <div class="timeline-block-header">
           <div class="timeline-block-time">当前打开</div>
-          <div class="timeline-block-count">${snapshot.tabs.length} 个标签页</div>
+          <div class="timeline-block-count">${searchResult ? searchResult.stats.tabMatches : snapshot.tabs.length} 个标签页</div>
         </div>
         <div class="timeline-tree-root">${openTree}</div>
       </section>`);
   }
 
-  for (const block of snapshot.sessions.blocks) {
+  for (const block of displaySnapshot.sessions.blocks) {
     blocks.push(renderTimelineSessionBlock(block, openTabMap, renderState));
   }
 
-  if (renderState.hidden > 0) {
+  if (searchResult?.stats.hiddenMatches > 0) {
+    blocks.push(`<button class="timeline-load-more" data-action="load-more-timeline-search">加载更多匹配项（剩余 ${searchResult.stats.hiddenMatches} 项）</button>`);
+  } else if (renderState.hidden > 0) {
     blocks.push(`<button class="timeline-load-more" data-action="load-more-timeline">加载更多（剩余 ${renderState.hidden} 项）</button>`);
   }
 
   container.innerHTML = blocks.join('');
-  if (empty) empty.hidden = blocks.length > 0;
+  syncTimelineSearchControls();
+  const hasMatches = !searchResult || searchResult.stats.totalMatches > 0;
+  if (empty) empty.hidden = Boolean(query) || blocks.length > 0;
+  if (searchEmpty) searchEmpty.hidden = !query || hasMatches;
   if (summary) {
-    const totalNodes = countTimelineTreeNodes(snapshot.tabTree) + snapshot.sessions.blocks.reduce((sum, block) => sum + block.records.length, 0);
-    summary.textContent = `${snapshot.tabs.length} 个已打开标签页 · ${snapshot.sessions.blocks.length} 个会话 · 已显示 ${renderState.rendered}/${totalNodes} 个节点`;
+    if (searchResult) {
+      summary.textContent = `找到 ${searchResult.stats.totalMatches} 个匹配项 · ${searchResult.stats.matchingSessions} 个历史会话 · 已显示 ${searchResult.stats.displayedMatches}/${searchResult.stats.totalMatches}`;
+    } else {
+      const totalNodes = countTimelineTreeNodes(snapshot.tabTree) + snapshot.sessions.blocks.reduce((sum, block) => sum + block.records.length, 0);
+      summary.textContent = `${snapshot.tabs.length} 个已打开标签页 · ${snapshot.sessions.blocks.length} 个会话 · 已显示 ${renderState.rendered}/${totalNodes} 个节点`;
+    }
   }
 }
 
@@ -1861,7 +1931,7 @@ async function renderTimelineView(force = false) {
   refreshButton?.classList.add('loading');
   if (refreshButton) refreshButton.disabled = true;
   if (summary) summary.textContent = '正在加载最近活动...';
-  timelineNodeLimit = TIMELINE_NODE_PAGE_SIZE;
+  if (!getTimelineSearchQuery()) timelineNodeLimit = TIMELINE_NODE_PAGE_SIZE;
 
   try {
     timelineSnapshot = await globalThis.TabOutBackgroundClient.getTimelineSnapshot({
@@ -2002,6 +2072,8 @@ let dashboardRenderVersion = 0;
 let timelineSnapshot = null;
 const TIMELINE_NODE_PAGE_SIZE = 200;
 let timelineNodeLimit = TIMELINE_NODE_PAGE_SIZE;
+let timelineSearchQuery = '';
+let timelineSearchNodeLimit = TIMELINE_NODE_PAGE_SIZE;
 const TIMELINE_BACK_TO_TOP_SHOW_AT = 320;
 const TIMELINE_BACK_TO_TOP_HIDE_AT = 120;
 let timelineBackToTopVisible = false;
@@ -3049,6 +3121,11 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  if (action === 'clear-timeline-search') {
+    clearTimelineSearch();
+    return;
+  }
+
   if (action === 'scroll-timeline-top') {
     scrollTimelineToTop();
     return;
@@ -3065,6 +3142,13 @@ document.addEventListener('click', async (e) => {
   if (action === 'load-more-timeline') {
     if (!timelineSnapshot) return;
     timelineNodeLimit += TIMELINE_NODE_PAGE_SIZE;
+    paintTimelineSnapshot(timelineSnapshot);
+    return;
+  }
+
+  if (action === 'load-more-timeline-search') {
+    if (!timelineSnapshot || !getTimelineSearchQuery()) return;
+    timelineSearchNodeLimit += TIMELINE_NODE_PAGE_SIZE;
     paintTimelineSnapshot(timelineSnapshot);
     return;
   }
@@ -3704,7 +3788,13 @@ document.getElementById('quickLinkDialog')?.addEventListener('click', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeQuickLinkPicker();
+  if (e.key !== 'Escape') return;
+  if (e.target.id === 'timelineSearch' && timelineSearchQuery) {
+    e.preventDefault();
+    clearTimelineSearch();
+    return;
+  }
+  closeQuickLinkPicker();
 });
 
 window.addEventListener('resize', () => {
@@ -3744,6 +3834,14 @@ document.addEventListener('input', async (e) => {
     await renderDashboard({ refreshTabs: false, renderAuxiliary: false });
     const input = document.getElementById('openTabsSearch');
     if (input) input.focus();
+    return;
+  }
+
+  if (e.target.id === 'timelineSearch') {
+    timelineSearchQuery = e.target.value || '';
+    timelineSearchNodeLimit = TIMELINE_NODE_PAGE_SIZE;
+    if (timelineSnapshot) paintTimelineSnapshot(timelineSnapshot);
+    document.getElementById('timelineSearch')?.focus();
     return;
   }
 
