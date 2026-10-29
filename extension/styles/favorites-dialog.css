@@ -93,8 +93,112 @@
   font-size: 13px;
 }
 
+.favorite-field .quick-link-input[aria-invalid="true"] {
+  border-color: var(--status-abandoned);
+}
+
+.favorite-field-error {
+  margin: 0;
+  color: var(--status-abandoned);
+  font-size: 11px;
+  font-weight: 500;
+}
+
 .favorite-field select.quick-link-input {
   appearance: auto;
+}
+
+.favorite-advanced-toggle {
+  grid-column: 1 / -1;
+}
+
+.favorite-advanced-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 0;
+}
+
+.favorite-advanced-button:hover,
+.favorite-advanced-button:focus-visible {
+  color: var(--ink);
+}
+
+.favorite-advanced-button svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s ease;
+}
+
+.favorite-advanced-button[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.favorite-advanced {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 15px;
+}
+
+.favorite-advanced[hidden] {
+  display: none;
+}
+
+.favorite-group-hint {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid color-mix(in srgb, var(--accent-sage) 32%, var(--card-border));
+  border-radius: 6px;
+  background: var(--sage-tint);
+  padding: 5px 6px 5px 9px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.favorite-group-hint[hidden] {
+  display: none;
+}
+
+.favorite-group-hint-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.favorite-group-hint button {
+  flex: none;
+  min-height: 24px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 8px;
+  font: inherit;
+  font-weight: 700;
+}
+
+.favorite-group-hint button[data-action="adopt-group-recommendation"] {
+  background: var(--accent-sage);
+  color: var(--accent-contrast);
+}
+
+.favorite-group-hint button:hover,
+.favorite-group-hint button:focus-visible {
+  outline: 1px solid var(--accent-sage);
+  outline-offset: 1px;
 }
 
 .favorite-color-field input {

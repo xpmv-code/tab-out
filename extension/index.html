@@ -7,6 +7,8 @@
   <title>Tab Out</title>
 
   <link rel="stylesheet" href="style.css">
+  <!-- Theme bootstrap: resolves data-theme synchronously before first paint -->
+  <script src="theme.js"></script>
 </head>
 <body>
 <div class="container">
@@ -33,6 +35,10 @@
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
           时间线
         </button>
+        <button class="view-switch-btn" data-action="switch-view" data-view="settings" role="tab" aria-selected="false" aria-controls="settingsView">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+          设置
+        </button>
       </div>
       <div class="group-by-control" id="groupByControl">
         <span class="group-by-label">分组方式</span>
@@ -55,13 +61,10 @@
         <div class="quick-link-group-tabs" id="quickLinkGroupTabs" role="tablist" aria-label="常用标签页分类"></div>
       </div>
       <div class="quick-link-group-actions favorites-toolbar" aria-label="常用标签页工具栏">
-        <button class="quick-link-group-action" type="button" data-action="import-quick-links" title="导入常用标签页" aria-label="导入常用标签页">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0 4-4m-4 4-4-4M5 17.25v1.5A2.25 2.25 0 0 0 7.25 21h9.5A2.25 2.25 0 0 0 19 18.75v-1.5" /></svg>
-          <span>导入</span>
-        </button>
-        <button class="quick-link-group-action" type="button" data-action="export-quick-links" title="导出常用标签页" aria-label="导出常用标签页">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15V3m0 0 4 4m-4-4L8 7M5 13.5v5.25A2.25 2.25 0 0 0 7.25 21h9.5A2.25 2.25 0 0 0 19 18.75V13.5" /></svg>
-          <span>导出</span>
+        <button class="quick-link-group-action cloud-sync-button" type="button" id="quickLinkSyncButton" title="在不同 Chrome 配置文件之间同步常用标签" aria-label="云同步">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7 18a4.5 4.5 0 0 1-.742-8.939A5.25 5.25 0 0 1 16.5 7.5h.75a3.75 3.75 0 0 1 1.5 7.187M12 12.75v7.5m0 0 3-3m-3 3-3-3" /></svg>
+          <span id="quickLinkSyncButtonLabel">云同步</span>
+          <span class="cloud-sync-state-dot" id="quickLinkSyncStateDot" data-state="local" aria-hidden="true"></span>
         </button>
         <button class="quick-link-group-action primary" type="button" data-action="show-quick-link-form" title="添加网站" aria-label="添加网站">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m7-7H5" /></svg>
@@ -75,7 +78,6 @@
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673A2.25 2.25 0 0 1 15.916 21H8.084a2.25 2.25 0 0 1-2.244-1.327L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0V4.477c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916" /></svg>
           <span>删除</span>
         </button>
-        <input id="quickLinkImportInput" type="file" accept="application/json,.json" hidden>
       </div>
     </div>
 
@@ -299,6 +301,90 @@
     </div>
   </main>
 
+  <main class="app-view settings-view dashboard-panel" id="settingsView" role="tabpanel" hidden>
+    <div class="settings-header">
+      <h2>设置</h2>
+      <p class="settings-subtitle">本页的主题、分组偏好与分类缓存仅保存在本机。</p>
+    </div>
+    <div class="settings-sections">
+      <section class="settings-section" id="settingsAppearance" aria-labelledby="settingsAppearanceTitle">
+        <h3 id="settingsAppearanceTitle">外观</h3>
+        <div class="settings-section-body" id="settingsAppearanceBody">
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <div class="settings-row-label">主题</div>
+              <div class="settings-row-note">“跟随系统”会随 Chrome 的浅色/深色外观自动切换。</div>
+            </div>
+            <div class="settings-theme-switcher" role="group" aria-label="主题模式">
+              <button class="settings-theme-btn active" type="button" data-action="set-theme" data-theme-mode="system" aria-pressed="true">跟随系统</button>
+              <button class="settings-theme-btn" type="button" data-action="set-theme" data-theme-mode="light" aria-pressed="false">浅色</button>
+              <button class="settings-theme-btn" type="button" data-action="set-theme" data-theme-mode="dark" aria-pressed="false">深色</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="settings-section" id="settingsData" aria-labelledby="settingsDataTitle">
+        <h3 id="settingsDataTitle">常用标签页数据</h3>
+        <div class="settings-section-body" id="settingsDataBody">
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <div class="settings-row-label">导入 / 导出</div>
+              <div class="settings-row-note">使用 JSON 文件在设备之间迁移常用标签页与分组。</div>
+            </div>
+            <div class="settings-row-actions">
+              <button class="settings-action-btn" type="button" data-action="import-quick-links">导入</button>
+              <button class="settings-action-btn" type="button" data-action="export-quick-links">导出</button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <div class="settings-row-label">分组偏好</div>
+              <div class="settings-row-note">智能分组推荐学习到的“域名→分组”记录，当前 <span id="settingsPreferenceCount">0</span> 条，仅保存在本机。</div>
+            </div>
+            <div class="settings-row-actions">
+              <button class="settings-action-btn danger" type="button" data-action="clear-group-preferences">清除偏好</button>
+            </div>
+          </div>
+          <input id="quickLinkImportInput" type="file" accept="application/json,.json" hidden>
+        </div>
+      </section>
+      <section class="settings-section" id="settingsSync" aria-labelledby="settingsSyncTitle">
+        <h3 id="settingsSyncTitle">云同步</h3>
+        <div class="settings-section-body" id="settingsSyncBody">
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <div class="settings-row-label">跨 Chrome 配置文件同步</div>
+              <div class="settings-row-note" id="settingsSyncStatus">当前仅使用本地数据。</div>
+            </div>
+            <div class="settings-row-actions">
+              <button class="settings-action-btn" type="button" data-action="open-cloud-sync-settings">云同步设置</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="settings-section" id="settingsCategories" aria-labelledby="settingsCategoriesTitle">
+        <h3 id="settingsCategoriesTitle">网站分类</h3>
+        <div class="settings-section-body" id="settingsCategoriesBody">
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <div class="settings-row-label">DeepSeek 分类</div>
+              <div class="settings-row-note" id="settingsDeepseekStatus">未配置——分类由内置规则处理。</div>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <div class="settings-row-label">分类缓存</div>
+              <div class="settings-row-note">已学习网站的分类结果，保存在本地 IndexedDB。</div>
+            </div>
+            <div class="settings-row-actions">
+              <button class="settings-action-btn danger" type="button" data-action="clear-category-cache">清除分类缓存</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
 </div><!-- end .container -->
 
 <button
@@ -330,7 +416,8 @@
     <div class="favorite-editor-fields">
       <label class="favorite-field favorite-field-wide">
         <span>网址</span>
-        <input class="quick-link-input" id="quickLinkUrl" type="text" inputmode="url" autocomplete="url" placeholder="https://example.com" required>
+        <input class="quick-link-input" id="quickLinkUrl" type="text" inputmode="url" autocomplete="url" list="quickLinkUrlSuggestions" placeholder="https://example.com" required>
+        <datalist id="quickLinkUrlSuggestions"></datalist>
       </label>
       <label class="favorite-field">
         <span>网站名称</span>
@@ -340,18 +427,31 @@
         <span>分组</span>
         <select class="quick-link-input" id="quickLinkGroupId" aria-label="常用标签页分组"></select>
       </label>
-      <label class="favorite-field favorite-field-wide">
-        <span>描述</span>
-        <input class="quick-link-input" id="quickLinkDescription" type="text" autocomplete="off" maxlength="100" placeholder="例如：API 服务平台">
-      </label>
-      <label class="favorite-field">
-        <span>Badge</span>
-        <input class="quick-link-input" id="quickLinkBadge" type="text" autocomplete="off" maxlength="16" placeholder="例如：API">
-      </label>
-      <label class="favorite-field favorite-color-field">
-        <span>品牌色</span>
-        <input id="quickLinkColor" type="color" value="#65758b" aria-label="品牌色">
-      </label>
+      <div class="favorite-group-hint" id="quickLinkGroupHint" role="status" hidden>
+        <span class="favorite-group-hint-text" id="quickLinkGroupHintText"></span>
+        <button type="button" data-action="adopt-group-recommendation">采纳</button>
+        <button type="button" data-action="dismiss-group-recommendation" aria-label="忽略分组建议">忽略</button>
+      </div>
+      <div class="favorite-advanced-toggle">
+        <button type="button" class="favorite-advanced-button" data-action="toggle-favorite-advanced" aria-expanded="false" aria-controls="favoriteAdvancedFields">
+          <span class="favorite-advanced-label">更多选项</span>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+        </button>
+      </div>
+      <div class="favorite-advanced" id="favoriteAdvancedFields" hidden>
+        <label class="favorite-field favorite-field-wide">
+          <span>描述</span>
+          <input class="quick-link-input" id="quickLinkDescription" type="text" autocomplete="off" maxlength="100" placeholder="例如：API 服务平台">
+        </label>
+        <label class="favorite-field">
+          <span>Badge</span>
+          <input class="quick-link-input" id="quickLinkBadge" type="text" autocomplete="off" maxlength="16" placeholder="例如：API">
+        </label>
+        <label class="favorite-field favorite-color-field">
+          <span>品牌色</span>
+          <input id="quickLinkColor" type="color" value="#65758b" aria-label="品牌色">
+        </label>
+      </div>
     </div>
     <div class="favorite-editor-actions">
       <button class="quick-link-form-btn" type="button" data-action="cancel-quick-link">取消</button>
@@ -389,6 +489,54 @@
   <button class="toast-action" id="toastAction" type="button" data-action="toast-action" hidden></button>
 </div>
 
+<dialog class="cloud-sync-dialog" id="quickLinkSyncDialog" aria-labelledby="cloudSyncTitle">
+  <div class="cloud-sync-panel">
+    <header class="cloud-sync-header">
+      <div>
+        <h2 id="cloudSyncTitle">Tab Out 云同步</h2>
+        <p>使用同一个 Tab Out 账号，在不同 Google 账号的 Chrome 配置文件之间共享常用标签。</p>
+      </div>
+      <button class="cloud-sync-close" id="cloudSyncClose" type="button" aria-label="关闭">×</button>
+    </header>
+
+    <div class="cloud-sync-status" id="cloudSyncStatus" data-state="local" role="status" aria-live="polite">当前仅使用本地数据。</div>
+
+    <div class="cloud-sync-config" id="cloudSyncConfigNotice" hidden></div>
+
+    <section id="cloudSyncSignedOut" hidden>
+      <form class="cloud-sync-form" id="cloudSyncEmailForm">
+        <label class="cloud-sync-field" for="cloudSyncEmail">
+          邮箱
+          <input id="cloudSyncEmail" type="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required>
+        </label>
+        <div class="cloud-sync-actions">
+          <button class="cloud-sync-action primary" id="cloudSyncSendCode" type="submit">发送验证码</button>
+        </div>
+      </form>
+      <form class="cloud-sync-form" id="cloudSyncOtpForm" hidden>
+        <label class="cloud-sync-field" for="cloudSyncCode">
+          邮箱验证码
+          <input id="cloudSyncCode" type="text" inputmode="numeric" autocomplete="one-time-code" minlength="4" maxlength="10" pattern="[0-9]{4,10}" placeholder="输入邮件中的数字验证码" required>
+        </label>
+        <p class="cloud-sync-note">验证码发送到 <strong id="cloudSyncPendingEmail"></strong>。在 Supabase 邮件模板中使用一次性验证码模式。</p>
+        <div class="cloud-sync-actions">
+          <button class="cloud-sync-action" id="cloudSyncChangeEmail" type="button">更换邮箱</button>
+          <button class="cloud-sync-action primary" id="cloudSyncVerifyCode" type="submit">验证并同步</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="cloudSyncSignedIn" hidden>
+      <p class="cloud-sync-note">当前 Tab Out 账号：<strong id="cloudSyncAccountEmail"></strong></p>
+      <p class="cloud-sync-note">仅同步常用标签、分组与顺序。浏览历史、统计和其他本地数据仍保留在本机。退出登录不会删除本地或云端数据。</p>
+      <div class="cloud-sync-actions">
+        <button class="cloud-sync-action" id="cloudSyncSignOut" type="button">退出登录</button>
+        <button class="cloud-sync-action primary" id="cloudSyncRunNow" type="button">立即同步</button>
+      </div>
+    </section>
+  </div>
+</dialog>
+
 <!-- Personal config (gitignored) — defines LOCAL_LANDING_PAGE_PATTERNS etc. -->
 <!-- If the file doesn't exist, that's fine — app.js uses sensible defaults. -->
 <script src="config.local.js"></script>
@@ -396,8 +544,10 @@
 <!-- Category labels remain in the UI; classification runs in the Service Worker -->
 <script src="constants/siteCategories.js"></script>
 <script src="services/backgroundClient.js"></script>
+<script src="services/groupPreferenceService.js"></script>
 <script src="favorites/favorites-metadata.js"></script>
 <script src="favorites/favorites-renderer.js"></script>
+<script src="services/cloudSync.js"></script>
 <script src="timeline-search.js"></script>
 
 <!-- Main dashboard logic — loads last so the DOM is ready -->

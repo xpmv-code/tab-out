@@ -495,7 +495,7 @@ function createQuickLinkGroup(name = '常用') {
 function getLocalFaviconUrl(pageUrl, size = 32) {
   if (!pageUrl) return '';
   try {
-    const faviconUrl = new URL(chrome.runtime.getURL('_favicon/'));
+    const faviconUrl = new URL(chrome.runtime.getURL('/_favicon/'));
     faviconUrl.searchParams.set('pageUrl', pageUrl);
     faviconUrl.searchParams.set('size', String(Math.max(16, Math.min(Number(size) || 32, 64))));
     return faviconUrl.toString();
@@ -526,6 +526,115 @@ function getQuickLinkUrlKey(rawUrl) {
   const parsed = new URL(normalized);
   parsed.hash = '';
   return parsed.href;
+}
+
+const QUICK_LINK_TRACKING_PARAM_PATTERN = /^(?:utm_|fbclid$|gclid$|dclid$|msclkid$|ref$|ref_src$|mc_cid$|mc_eid$|igshid$|_hsenc$|_hsmi$|vero_|spm$)/i;
+
+/**
+ * cleanPastedUrl(rawText)
+ *
+ * Trims pasted text and strips common tracking parameters from web URLs.
+ * Returns the trimmed original text when there is nothing to clean, so
+ * non-URL pastes and protocol-less input stay untouched.
+ */
+function cleanPastedUrl(rawText) {
+  const trimmed = String(rawText || '').trim();
+  if (!trimmed) return '';
+
+  let parsed;
+  try {
+    parsed = new URL(normalizeQuickLinkUrl(trimmed));
+  } catch {
+    return trimmed;
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol)) return trimmed;
+
+  let removed = false;
+  for (const key of [...parsed.searchParams.keys()]) {
+    if (QUICK_LINK_TRACKING_PARAM_PATTERN.test(key)) {
+      parsed.searchParams.delete(key);
+      removed = true;
+    }
+  }
+  return removed ? parsed.toString() : trimmed;
+}
+
+/**
+ * getQuickLinkUrlValidationError(rawUrl)
+ *
+ * Returns null for a usable web URL, otherwise { code, message }:
+ * missing-url / invalid-url / unsupported-protocol. Hostnames must look
+ * plausible (dotted, localhost or IP literal) so bare words are rejected
+ * instead of silently becoming https://word.
+ */
+function getQuickLinkUrlValidationError(rawUrl) {
+  const trimmed = String(rawUrl || '').trim();
+  if (!trimmed) return { code: 'missing-url', message: '请输入网址' };
+
+  let parsed;
+  try {
+    parsed = new URL(normalizeQuickLinkUrl(trimmed));
+  } catch {
+    return { code: 'invalid-url', message: '请输入有效的网址' };
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    return { code: 'unsupported-protocol', message: '仅支持 http/https 链接' };
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  const plausible = hostname.includes('.')
+    || hostname === 'localhost'
+    || hostname.endsWith('.localhost')
+    || hostname.startsWith('[');
+  if (!plausible) return { code: 'invalid-url', message: '请输入有效的网址' };
+
+  return null;
+}
+
+function createQuickLinkFieldError(field, code, message) {
+  const error = new Error(message);
+  error.field = field;
+  error.code = code;
+  return error;
+}
+
+/**
+ * buildUrlSuggestions(limit)
+ *
+ * Merges open tabs (first) with recent browsing history into a deduplicated
+ * list of { url, title } candidates for the URL input datalist. Purely local;
+ * failing chrome APIs degrade to an empty list.
+ */
+async function buildUrlSuggestions(limit = 100) {
+  const suggestions = [];
+  const seen = new Set();
+
+  const push = (rawUrl, title) => {
+    if (suggestions.length >= limit) return;
+    const url = normalizeQuickLinkUrl(rawUrl);
+    if (!url || !isSupportedQuickLinkUrl(url) || seen.has(url)) return;
+    seen.add(url);
+    suggestions.push({ url, title: String(title || '').trim() });
+  };
+
+  try {
+    const tabs = await chrome.tabs.query({});
+    tabs.forEach(tab => push(tab?.url, tab?.title));
+  } catch (error) {
+    console.warn('[tab-out] Could not read tabs for URL suggestions:', error);
+  }
+
+  try {
+    if (chrome.history?.search) {
+      const items = await chrome.history.search({ text: '', maxResults: limit, startTime: 0 });
+      items.forEach(item => push(item?.url, item?.title));
+    }
+  } catch (error) {
+    console.warn('[tab-out] Could not read history for URL suggestions:', error);
+  }
+
+  return suggestions;
 }
 
 function updateQuickLinkLookup(data) {
@@ -563,8 +672,59 @@ function getQuickLinkInitial(title) {
   return match ? match[0].toUpperCase() : '链';
 }
 
-function getQuickLinkFaviconUrl(url) {
-  return getLocalFaviconUrl(url, 64);
+function getQuickLinkFaviconDomain(pageUrl) {
+  try {
+    const parsedUrl = new URL(pageUrl);
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) return '';
+
+    const hostname = parsedUrl.hostname.toLowerCase().replace(/^www\./, '').replace(/\.$/, '');
+    const isIpAddress = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname.includes(':') || hostname.startsWith('[');
+    const isLocalHostname = hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local');
+    if (isIpAddress || isLocalHostname || !hostname.includes('.')) return '';
+    return hostname;
+  } catch {
+    return '';
+  }
+}
+
+function getQuickLinkFaviconUrl(pageUrl) {
+  const domain = getQuickLinkFaviconDomain(pageUrl);
+  if (!domain) return '';
+  const faviconUrl = new URL(`https://a.favicon.im/${encodeURIComponent(domain)}`);
+  faviconUrl.searchParams.set('throw-error-on-404', 'true');
+  return faviconUrl.toString();
+}
+
+function getQuickLinkFaviconChromeFallbackUrl(pageUrl) {
+  return getLocalFaviconUrl(pageUrl, 32);
+}
+
+function getQuickLinkFaviconFallbackUrl(pageUrl) {
+  try {
+    const parsedUrl = new URL(pageUrl);
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) return '';
+    return new URL('/favicon.ico', parsedUrl.origin).toString();
+  } catch {
+    return '';
+  }
+}
+
+function handleFaviconLoadError(image) {
+  const fallbackSrc = image?.dataset?.fallbackSrc;
+  if (fallbackSrc && fallbackSrc !== image.src) {
+    const nextFallbackSrc = image.dataset.fallbackSrcNext;
+    const thirdFallbackSrc = image.dataset.fallbackSrcThird;
+    if (nextFallbackSrc) image.dataset.fallbackSrc = nextFallbackSrc;
+    else delete image.dataset.fallbackSrc;
+    if (thirdFallbackSrc) image.dataset.fallbackSrcNext = thirdFallbackSrc;
+    else delete image.dataset.fallbackSrcNext;
+    delete image.dataset.fallbackSrcThird;
+    image.src = fallbackSrc;
+    return true;
+  }
+
+  if (image) image.hidden = true;
+  return false;
 }
 
 function normalizeQuickLinkData(rawData, legacyLinks = []) {
@@ -633,6 +793,12 @@ async function saveQuickLinkData(data) {
   const normalized = normalizeQuickLinkData(data);
   await chrome.storage.local.set({ [QUICK_LINK_DATA_KEY]: normalized });
   updateQuickLinkLookup(normalized);
+  try {
+    await globalThis.TabOutCloudSync?.recordLocalDataChange(normalized);
+  } catch (error) {
+    // Cloud sync is optional: never fail a local favorite edit because sync is unavailable.
+    console.warn('[tab-out] Could not queue cloud sync:', error);
+  }
   return normalized;
 }
 
@@ -732,16 +898,9 @@ async function importQuickLinks(file) {
 }
 
 async function addQuickLink(rawUrl, rawTitle = '', groupId = activeQuickLinkGroupId, details = {}) {
+  const validation = getQuickLinkUrlValidationError(rawUrl);
+  if (validation) throw createQuickLinkFieldError('url', validation.code, validation.message);
   const url = normalizeQuickLinkUrl(rawUrl);
-  if (!url) throw new Error('Missing URL');
-
-  let parsed;
-  try { parsed = new URL(url); }
-  catch { throw new Error('Invalid URL'); }
-
-  if (!/^https?:$/.test(parsed.protocol)) {
-    throw new Error('Only web links are supported');
-  }
 
   const data = await getQuickLinkData();
   const targetGroupId = data.groups.some(group => group.id === groupId)
@@ -802,8 +961,9 @@ async function updateQuickLink(id, changes) {
   const link = data.links.find(item => item.id === id);
   if (!link) throw new Error('Favorite not found');
 
+  const validation = getQuickLinkUrlValidationError(changes.url || link.url);
+  if (validation) throw createQuickLinkFieldError('url', validation.code, validation.message);
   const url = normalizeQuickLinkUrl(changes.url || link.url);
-  if (!isSupportedQuickLinkUrl(url)) throw new Error('Invalid URL');
   const urlKey = getQuickLinkUrlKey(url);
   const duplicate = data.links.find(item => item.id !== id && getQuickLinkUrlKey(item.url) === urlKey);
   if (duplicate) {
@@ -1249,9 +1409,43 @@ function animateCardOut(card) {
 }
 
 /**
+ * updateToastIcon(iconUrl)
+ *
+ * Swaps the default checkmark for a site favicon when iconUrl is given;
+ * removes it (and restores the checkmark) otherwise. A failing favicon
+ * load removes the icon slot instead of showing a broken image.
+ */
+function updateToastIcon(iconUrl) {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  const defaultIcon = toast.querySelector('svg');
+  const existing = toast.querySelector('.toast-icon');
+
+  if (!iconUrl) {
+    existing?.remove();
+    if (defaultIcon) defaultIcon.hidden = false;
+    return;
+  }
+
+  if (defaultIcon) defaultIcon.hidden = true;
+  const icon = existing || document.createElement('img');
+  if (!existing) {
+    icon.className = 'toast-icon';
+    icon.alt = '';
+    icon.onerror = () => {
+      icon.remove();
+      if (defaultIcon) defaultIcon.hidden = false;
+    };
+    toast.insertBefore(icon, toast.firstChild);
+  }
+  icon.src = iconUrl;
+}
+
+/**
  * showToast(message)
  *
  * Brief pop-up notification at the bottom of the screen.
+ * action: { label, handler, iconUrl } — all optional.
  */
 function showToast(message, action = null) {
   const toast = document.getElementById('toast');
@@ -1261,6 +1455,7 @@ function showToast(message, action = null) {
 
   clearTimeout(toastHideTimer);
   text.textContent = message;
+  updateToastIcon(typeof action?.iconUrl === 'string' ? action.iconUrl : '');
   toastActionHandler = typeof action?.handler === 'function' ? action.handler : null;
   if (actionButton) {
     actionButton.hidden = !toastActionHandler;
@@ -1950,11 +2145,13 @@ async function renderTimelineView(force = false) {
 }
 
 async function setAppView(view) {
-  const nextView = view === 'timeline' ? 'timeline' : 'dashboard';
+  const nextView = view === 'timeline' ? 'timeline' : view === 'settings' ? 'settings' : 'dashboard';
   activeAppView = nextView;
 
   document.getElementById('dashboardView').hidden = nextView !== 'dashboard';
   document.getElementById('timelineView').hidden = nextView !== 'timeline';
+  const settingsView = document.getElementById('settingsView');
+  if (settingsView) settingsView.hidden = nextView !== 'settings';
   syncTimelineBackToTopVisibility();
   const groupByControl = document.getElementById('groupByControl');
   if (groupByControl) groupByControl.hidden = nextView !== 'dashboard';
@@ -1966,8 +2163,59 @@ async function setAppView(view) {
 
   if (nextView === 'timeline') {
     await renderTimelineView(false);
+  } else if (nextView === 'settings') {
+    await renderSettingsView();
   } else {
     await renderDashboard({ refreshTabs: false, renderAuxiliary: false });
+  }
+}
+
+/**
+ * renderSettingsView()
+ *
+ * Refreshes dynamic status content on the settings page: theme control
+ * state, preference count, cloud sync status and DeepSeek configuration.
+ * Must stay null-safe for headless/VM environments.
+ */
+async function renderSettingsView() {
+  const themeMode = globalThis.TabOutTheme?.getMode?.() || 'system';
+  document.querySelectorAll('.settings-theme-btn').forEach(button => {
+    const active = button.dataset.themeMode === themeMode;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+
+  const preferenceCount = document.getElementById('settingsPreferenceCount');
+  if (preferenceCount) {
+    globalThis.TabOutGroupPreferenceService?.getAll?.().then(entries => {
+      preferenceCount.textContent = String(Object.keys(entries || {}).length);
+    }).catch(() => {});
+  }
+
+  const syncStatus = document.getElementById('settingsSyncStatus');
+  if (syncStatus) syncStatus.textContent = await getSettingsSyncStatusText();
+
+  const deepseekStatus = document.getElementById('settingsDeepseekStatus');
+  if (deepseekStatus) {
+    const hasKey = Boolean(String(globalThis.DEEPSEEK_API_KEY || '').trim());
+    const model = String(globalThis.DEEPSEEK_MODEL || 'deepseek-chat').trim();
+    deepseekStatus.textContent = hasKey
+      ? `已配置（模型：${model}）——未知网站将请求 DeepSeek 分类。`
+      : '未配置——分类由内置规则处理。';
+  }
+}
+
+async function getSettingsSyncStatusText() {
+  try {
+    if (!globalThis.TabOutCloudSync?.isConfigured?.()) return '未配置 Supabase——当前仅使用本地数据。';
+    const state = await chrome.storage.local.get('tabOutSyncSession');
+    const session = state?.tabOutSyncSession;
+    if (session?.userId && session?.accessToken) {
+      return session.email ? `已登录：${session.email}` : '已登录，常用标签页云端同步中。';
+    }
+    return '已配置但未登录——当前仅使用本地数据。';
+  } catch {
+    return '当前仅使用本地数据。';
   }
 }
 
@@ -2204,6 +2452,8 @@ async function renderQuickLinks({ classify = true } = {}) {
     escapeAttr,
     escapeHtml,
     getFaviconUrl: getQuickLinkFaviconUrl,
+    getFaviconFallbackUrl: getQuickLinkFaviconChromeFallbackUrl,
+    getFaviconFallbackUrlNext: getQuickLinkFaviconFallbackUrl,
     getInitial: getQuickLinkInitial,
   });
   renderer.applyCardColors(strip);
@@ -2219,6 +2469,43 @@ function getFavoriteHostname(url) {
     return new URL(url).hostname.replace(/^www\./, '');
   } catch {
     return '';
+  }
+}
+
+/**
+ * resolveGroupRecommendation(rawUrl, groups)
+ *
+ * Group recommendation for the add-favorite flow.
+ * Priority: stored user preference (must still exist) > rule/AI category.
+ * Never throws and never blocks; any failure degrades to null (no hint).
+ */
+async function resolveGroupRecommendation(rawUrl, groups) {
+  const groupList = Array.isArray(groups) ? groups : [];
+  const service = globalThis.TabOutGroupPreferenceService;
+  const hostname = service?.normalizeHostname(rawUrl) || '';
+  if (!hostname) return null;
+
+  try {
+    const preference = await service?.get(hostname);
+    const preferredName = String(preference?.groupName || '').trim();
+    if (preferredName && groupList.some(group => group.name === preferredName)) {
+      return { groupName: preferredName, source: 'preference' };
+    }
+  } catch (error) {
+    console.warn('[tab-out] Group preference lookup failed:', error);
+  }
+
+  if (!globalThis.TabOutBackgroundClient?.getCategories) return null;
+  try {
+    const categories = await globalThis.TabOutBackgroundClient.getCategories([hostname]);
+    // mapServiceCategory falls back to '其他' itself; !suggested only guards
+    // a missing favorites-metadata module.
+    const suggested = globalThis.TabOutFavoritesMetadata?.mapServiceCategory(categories.get(hostname));
+    if (!suggested || suggested === '其他') return null;
+    return { groupName: suggested, source: 'category' };
+  } catch (error) {
+    console.warn('[tab-out] Group recommendation failed:', error);
+    return null;
   }
 }
 
@@ -2293,6 +2580,7 @@ async function acceptFavoriteSuggestion(linkId) {
   link.suggestionStatus = 'accepted';
   link.suggestedCategory = '';
   await saveQuickLinkData(data);
+  recordGroupPreference(link.url, group.name);
   return group;
 }
 
@@ -2313,6 +2601,74 @@ async function refreshQuickLinkViews() {
 
 function getQuickLinkDuplicateMessage(match) {
   return `已存在于“${match?.group?.name || '常用'}”分组`;
+}
+
+/**
+ * recordGroupPreference(url, groupName)
+ *
+ * Fire-and-forget: remembers the group the user actually chose for this
+ * hostname so future recommendations follow personal habits. Never blocks
+ * or breaks the calling flow.
+ */
+function recordGroupPreference(url, groupName) {
+  globalThis.TabOutGroupPreferenceService?.record(url, groupName)?.catch?.(error => {
+    console.warn('[tab-out] Could not record group preference:', error);
+  });
+}
+
+function showQuickLinkDuplicateToast(match) {
+  showToast(getQuickLinkDuplicateMessage(match), {
+    label: '查看',
+    handler: () => revealQuickLink(match),
+  });
+}
+
+function announceQuickLinkAdded(url, groupName, linkId) {
+  recordGroupPreference(url, groupName);
+  showToast(`已添加到“${groupName || '常用'}”分组`, {
+    iconUrl: getQuickLinkFaviconUrl(url),
+  });
+  if (linkId) highlightQuickLinkCard(linkId);
+}
+
+function highlightQuickLinkCard(linkId) {
+  const card = document.querySelector(`#quickLinksStrip [data-link-id="${CSS.escape(linkId)}"]`);
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  card.classList.remove('favorite-card-reveal');
+  void card.offsetWidth; // restart the animation if the class was just removed
+  card.classList.add('favorite-card-reveal');
+  setTimeout(() => card.classList.remove('favorite-card-reveal'), 1600);
+}
+
+/**
+ * revealQuickLink(match)
+ *
+ * Navigates to an existing favorite after a duplicate add attempt:
+ * switches to the dashboard view, activates a group that contains the
+ * card when the current filter hides it, then scrolls to and highlights it.
+ */
+async function revealQuickLink(match) {
+  const linkId = match?.link?.id;
+  if (!linkId) return;
+
+  if (activeAppView !== 'dashboard') await setAppView('dashboard');
+
+  const data = await getQuickLinkData();
+  const link = data.links.find(item => item.id === linkId);
+  if (!link) return;
+
+  const targetGroupId = data.groups.some(group => group.id === link.groupId)
+    ? link.groupId
+    : data.groups[0]?.id;
+  if (!targetGroupId) return;
+
+  if (activeQuickLinkGroupId !== QUICK_LINK_ALL_GROUP_ID && activeQuickLinkGroupId !== targetGroupId) {
+    activeQuickLinkGroupId = targetGroupId;
+    await chrome.storage.local.set({ [QUICK_LINK_ACTIVE_GROUP_KEY]: activeQuickLinkGroupId });
+  }
+  await renderQuickLinks({ classify: false });
+  highlightQuickLinkCard(linkId);
 }
 
 function closeQuickLinkPicker() {
@@ -2348,7 +2704,7 @@ async function openQuickLinkPicker(anchor, rawUrl, rawTitle) {
   const duplicate = findQuickLinkByUrl(data, rawUrl);
   if (duplicate) {
     closeQuickLinkPicker();
-    showToast(getQuickLinkDuplicateMessage(duplicate));
+    showQuickLinkDuplicateToast(duplicate);
     return;
   }
 
@@ -2377,6 +2733,22 @@ async function openQuickLinkPicker(anchor, rawUrl, rawTitle) {
   if (createInput) createInput.value = '';
   picker.hidden = false;
   positionQuickLinkPicker(anchor);
+
+  // Async recommendation highlight; never blocks opening the picker.
+  const pickerUrl = quickLinkPickerState.url;
+  resolveGroupRecommendation(pickerUrl, data.groups).then(recommendation => {
+    if (!recommendation || picker.hidden || quickLinkPickerState?.url !== pickerUrl) return;
+    const target = [...groupList.querySelectorAll('.quick-link-picker-group')].find(button =>
+      (button.querySelector('span')?.textContent || '') === recommendation.groupName);
+    if (!target || target.querySelector('.quick-link-picker-recommend-badge')) return;
+    target.classList.add('recommended');
+    const badge = document.createElement('span');
+    badge.className = 'quick-link-picker-recommend-badge';
+    badge.textContent = '推荐';
+    target.appendChild(badge);
+  }).catch(error => {
+    console.warn('[tab-out] Picker group recommendation failed:', error);
+  });
 }
 
 async function addPickerTabToGroup(groupId) {
@@ -2385,7 +2757,7 @@ async function addPickerTabToGroup(groupId) {
   const result = await addQuickLink(url, title, groupId);
   if (result.status === 'duplicate') {
     closeQuickLinkPicker();
-    showToast(getQuickLinkDuplicateMessage(result));
+    showQuickLinkDuplicateToast(result);
     return;
   }
 
@@ -2393,7 +2765,173 @@ async function addPickerTabToGroup(groupId) {
   await chrome.storage.local.set({ [QUICK_LINK_ACTIVE_GROUP_KEY]: activeQuickLinkGroupId });
   closeQuickLinkPicker();
   await refreshQuickLinkViews();
-  showToast(`已添加到“${result.group.name}”分组`);
+  announceQuickLinkAdded(url, result.group.name, result.link?.id);
+}
+
+/**
+ * shouldExpandFavoriteAdvanced(link)
+ *
+ * Advanced fields (description/badge/color) auto-expand only when the user
+ * has customized them before; auto-inferred values keep the form compact.
+ */
+function shouldExpandFavoriteAdvanced(link) {
+  return link?.metadataSource === 'custom';
+}
+
+function setFavoriteAdvancedExpanded(expanded) {
+  const panel = document.getElementById('favoriteAdvancedFields');
+  const toggle = document.querySelector('.favorite-advanced-button');
+  if (panel) panel.hidden = !expanded;
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', String(Boolean(expanded)));
+    const label = toggle.querySelector('.favorite-advanced-label');
+    if (label) label.textContent = expanded ? '收起选项' : '更多选项';
+  }
+}
+
+let dialogRecommendationTimer = null;
+let dialogRecommendation = null;
+const dialogDismissedHostnames = new Set();
+
+function hideDialogGroupRecommendation() {
+  dialogRecommendation = null;
+  const hint = document.getElementById('quickLinkGroupHint');
+  if (hint) hint.hidden = true;
+}
+
+function scheduleDialogGroupRecommendation() {
+  clearTimeout(dialogRecommendationTimer);
+  dialogRecommendationTimer = setTimeout(() => {
+    updateDialogGroupRecommendation().catch(error => {
+      console.warn('[tab-out] Group recommendation update failed:', error);
+    });
+  }, 500);
+}
+
+async function updateDialogGroupRecommendation() {
+  const urlInput = document.getElementById('quickLinkUrl');
+  const groupSelect = document.getElementById('quickLinkGroupId');
+  const rawUrl = urlInput?.value || '';
+  hideDialogGroupRecommendation();
+  if (getQuickLinkUrlValidationError(rawUrl)) return;
+
+  const hostname = globalThis.TabOutGroupPreferenceService?.normalizeHostname(rawUrl) || '';
+  if (!hostname || dialogDismissedHostnames.has(hostname)) return;
+
+  const data = await getQuickLinkData();
+  const recommendation = await resolveGroupRecommendation(rawUrl, data.groups);
+  if (!recommendation) return;
+  // The user may have kept typing while the async lookup was in flight.
+  if ((document.getElementById('quickLinkUrl')?.value || '') !== rawUrl) return;
+
+  const selectedName = data.groups.find(group => group.id === groupSelect?.value)?.name;
+  if (recommendation.groupName === selectedName) return;
+
+  dialogRecommendation = { hostname, groupName: recommendation.groupName, source: recommendation.source };
+  const hint = document.getElementById('quickLinkGroupHint');
+  const text = document.getElementById('quickLinkGroupHintText');
+  if (text) {
+    text.textContent = recommendation.source === 'preference'
+      ? `按你的习惯建议归入“${recommendation.groupName}”`
+      : `建议归入“${recommendation.groupName}”`;
+  }
+  if (hint) hint.hidden = false;
+}
+
+async function adoptDialogGroupRecommendation() {
+  const recommendation = dialogRecommendation;
+  hideDialogGroupRecommendation();
+  if (!recommendation) return;
+
+  const groupSelect = document.getElementById('quickLinkGroupId');
+  if (!groupSelect) return;
+
+  // Recommendations carry a group NAME (they may reference a group that does
+  // not exist yet); resolve it to an id against fresh data before selecting.
+  let group;
+  try {
+    const data = await getQuickLinkData();
+    group = data.groups.find(item => item.name.toLowerCase() === recommendation.groupName.toLowerCase());
+    if (!group) group = await addQuickLinkGroup(recommendation.groupName);
+  } catch (error) {
+    console.warn('[tab-out] Could not resolve recommended group:', error);
+    showToast('无法创建推荐分组');
+    return;
+  }
+
+  let option = [...groupSelect.options].find(item => item.value === group.id);
+  if (!option) {
+    option = document.createElement('option');
+    option.value = group.id;
+    option.textContent = group.name;
+    groupSelect.appendChild(option);
+  }
+  groupSelect.value = group.id;
+  groupSelect.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+async function populateQuickLinkUrlSuggestions() {
+  const datalist = document.getElementById('quickLinkUrlSuggestions');
+  if (!datalist) return;
+  const suggestions = await buildUrlSuggestions();
+  datalist.innerHTML = suggestions.map(item =>
+    `<option value="${escapeAttr(item.url)}"${item.title ? ` label="${escapeAttr(item.title)}"` : ''}></option>`
+  ).join('');
+}
+
+function handleQuickLinkUrlPaste(event) {
+  const input = event.currentTarget;
+  const text = event.clipboardData?.getData('text') || '';
+  if (!text.trim()) return;
+
+  const cleaned = cleanPastedUrl(text);
+  if (cleaned === text) return;
+
+  event.preventDefault();
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? input.value.length;
+  input.value = input.value.slice(0, start) + cleaned + input.value.slice(end);
+  const caret = start + cleaned.length;
+  input.setSelectionRange(caret, caret);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function showFieldError(inputId, message) {
+  const input = document.getElementById(inputId);
+  const field = input?.closest('.favorite-field');
+  if (!input || !field) return;
+  clearFieldError(inputId);
+  const error = document.createElement('p');
+  error.className = 'favorite-field-error';
+  error.id = `${inputId}-error`;
+  error.setAttribute('role', 'alert');
+  error.textContent = message;
+  field.appendChild(error);
+  input.setAttribute('aria-invalid', 'true');
+  input.setAttribute('aria-describedby', error.id);
+}
+
+function clearFieldError(inputId) {
+  const input = document.getElementById(inputId);
+  const field = input?.closest('.favorite-field');
+  field?.querySelector('.favorite-field-error')?.remove();
+  if (input) {
+    input.removeAttribute('aria-invalid');
+    input.removeAttribute('aria-describedby');
+  }
+}
+
+function validateQuickLinkUrlField() {
+  const input = document.getElementById('quickLinkUrl');
+  if (!input) return;
+  const value = input.value;
+  if (!value.trim()) {
+    clearFieldError('quickLinkUrl');
+    return;
+  }
+  const validation = getQuickLinkUrlValidationError(value);
+  if (validation) showFieldError('quickLinkUrl', validation.message);
+  else clearFieldError('quickLinkUrl');
 }
 
 async function showQuickLinkForm(linkId = '') {
@@ -2435,14 +2973,26 @@ async function showQuickLinkForm(linkId = '') {
   if (title) title.textContent = link ? '编辑网站' : '添加网站';
   if (subtitle) subtitle.textContent = link ? '更新快捷方式信息' : '创建新的快捷方式';
   if (submitButton) submitButton.textContent = link ? '保存修改' : '添加网站';
+  setFavoriteAdvancedExpanded(shouldExpandFavoriteAdvanced(link));
+  clearFieldError('quickLinkUrl');
+  // dialogDismissedHostnames intentionally survives reopens: "忽略" suppresses
+  // the hint for the whole page session (spec R6), not just one dialog open.
+  hideDialogGroupRecommendation();
 
   if (!dialog.open) dialog.showModal();
   requestAnimationFrame(() => (link ? nameInput : urlInput)?.focus());
+  populateQuickLinkUrlSuggestions().catch(error => {
+    console.warn('[tab-out] Could not fill URL suggestions:', error);
+  });
+  scheduleDialogGroupRecommendation();
 }
 
 function hideQuickLinkForm() {
   const dialog = document.getElementById('quickLinkDialog');
   if (dialog?.open) dialog.close();
+  clearTimeout(dialogRecommendationTimer);
+  hideDialogGroupRecommendation();
+  clearFieldError('quickLinkUrl');
 }
 
 async function showQuickLinkGroupForm(mode) {
@@ -3071,7 +3621,7 @@ document.addEventListener('error', (e) => {
     !el.classList.contains('quick-link-favicon') &&
     !el.classList.contains('workspace-favicon')
   ) return;
-  el.hidden = true;
+  handleFaviconLoadError(el);
 }, true);
 
 
@@ -3104,6 +3654,12 @@ document.addEventListener('click', async (e) => {
   // ---- View switcher and timeline ----
   if (action === 'switch-view') {
     await setAppView(actionEl.dataset.view);
+    return;
+  }
+
+  if (action === 'set-theme') {
+    globalThis.TabOutTheme?.setMode?.(actionEl.dataset.themeMode);
+    await renderSettingsView();
     return;
   }
 
@@ -3370,6 +3926,58 @@ document.addEventListener('click', async (e) => {
 
   if (action === 'cancel-quick-link') {
     hideQuickLinkForm();
+    return;
+  }
+
+  if (action === 'toggle-favorite-advanced') {
+    const panel = document.getElementById('favoriteAdvancedFields');
+    setFavoriteAdvancedExpanded(Boolean(panel?.hidden));
+    return;
+  }
+
+  if (action === 'clear-group-preferences') {
+    const service = globalThis.TabOutGroupPreferenceService;
+    if (!service) return;
+    const entries = await service.getAll();
+    const count = Object.keys(entries).length;
+    if (!count) {
+      showToast('暂无分组偏好记录');
+      return;
+    }
+    await service.clear();
+    showToast(`已清除 ${count} 条分组偏好记录`);
+    await renderSettingsView();
+    return;
+  }
+
+  if (action === 'open-cloud-sync-settings') {
+    globalThis.TabOutCloudSync?.openDialog?.();
+    return;
+  }
+
+  if (action === 'clear-category-cache') {
+    if (!globalThis.TabOutBackgroundClient?.clearCategoryCache) {
+      showToast('分类服务不可用');
+      return;
+    }
+    try {
+      await globalThis.TabOutBackgroundClient.clearCategoryCache();
+      showToast('已清除网站分类缓存');
+    } catch (error) {
+      console.warn('[tab-out] Category cache clear failed:', error);
+      showToast('清除分类缓存失败');
+    }
+    return;
+  }
+
+  if (action === 'adopt-group-recommendation') {
+    await adoptDialogGroupRecommendation();
+    return;
+  }
+
+  if (action === 'dismiss-group-recommendation') {
+    if (dialogRecommendation?.hostname) dialogDismissedHostnames.add(dialogRecommendation.hostname);
+    hideDialogGroupRecommendation();
     return;
   }
 
@@ -3982,15 +4590,34 @@ document.addEventListener('submit', async (e) => {
           ) ? 'custom' : 'auto',
         });
     if (result.status === 'duplicate') {
-      showToast(getQuickLinkDuplicateMessage(result));
+      if (editing) {
+        // The modal dialog sits in the top layer and covers toasts;
+        // keep the user's edits and surface the conflict inline instead.
+        showFieldError('quickLinkUrl', `该网址${getQuickLinkDuplicateMessage(result)}`);
+        if (urlInput) urlInput.focus();
+      } else {
+        hideQuickLinkForm();
+        showQuickLinkDuplicateToast(result);
+      }
       return;
     }
     hideQuickLinkForm();
     await refreshQuickLinkViews();
-    showToast(editing ? '常用标签页已更新' : '常用标签页已添加');
-  } catch {
-    showToast('请输入有效的网址');
-    if (urlInput) urlInput.focus();
+    const savedUrl = result.link?.url || rawUrl;
+    if (editing) {
+      recordGroupPreference(savedUrl, result.group?.name);
+      showToast('常用标签页已更新', { iconUrl: getQuickLinkFaviconUrl(savedUrl) });
+    } else {
+      announceQuickLinkAdded(savedUrl, result.group?.name, result.link?.id);
+    }
+  } catch (error) {
+    if (error?.field === 'url') {
+      showFieldError('quickLinkUrl', error.message || '请输入有效的网址');
+      if (urlInput) urlInput.focus();
+    } else {
+      console.warn('[tab-out] Quick link save failed:', error);
+      showToast('无法保存常用标签页');
+    }
   }
 });
 
@@ -4004,6 +4631,8 @@ document.addEventListener('change', async (e) => {
       const group = data.groups.find(item => item.id === e.target.value) || data.groups[0];
       colorInput.value = globalThis.TabOutFavoritesMetadata?.getCategoryColor(group.name) || '#65758b';
     }
+    hideDialogGroupRecommendation();
+    scheduleDialogGroupRecommendation();
     return;
   }
 
@@ -4063,4 +4692,28 @@ document.addEventListener('change', async (e) => {
 /* ----------------------------------------------------------------
    INITIALIZE
    ---------------------------------------------------------------- */
+document.addEventListener('tabout:quick-links-synced', () => {
+  refreshQuickLinkViews().catch(error => {
+    console.warn('[tab-out] Could not refresh favorites after cloud sync:', error);
+  });
+});
+globalThis.TabOutCloudSync?.initialize().catch(error => {
+  console.warn('[tab-out] Cloud sync initialization failed:', error);
+});
+
+const quickLinkUrlInput = document.getElementById('quickLinkUrl');
+quickLinkUrlInput?.addEventListener('paste', handleQuickLinkUrlPaste);
+quickLinkUrlInput?.addEventListener('blur', validateQuickLinkUrlField);
+quickLinkUrlInput?.addEventListener('input', () => {
+  clearFieldError('quickLinkUrl');
+  scheduleDialogGroupRecommendation();
+});
+
+// Covers ESC / native cancel, which bypass hideQuickLinkForm().
+document.getElementById('quickLinkDialog')?.addEventListener('close', () => {
+  clearTimeout(dialogRecommendationTimer);
+  hideDialogGroupRecommendation();
+  clearFieldError('quickLinkUrl');
+});
+
 renderDashboard();

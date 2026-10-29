@@ -821,6 +821,26 @@ footer,
   }
 }
 
+@keyframes favoriteRevealFlash {
+  0% {
+    box-shadow: 0 0 0 2px var(--accent-sage);
+    background-color: var(--sage-tint);
+  }
+  70% {
+    box-shadow: 0 0 0 2px var(--accent-sage);
+    background-color: var(--sage-tint);
+  }
+  100% {
+    box-shadow: 0 0 0 2px transparent;
+    background-color: transparent;
+  }
+}
+
+.favorite-card-reveal {
+  animation: favoriteRevealFlash 1.6s ease-out;
+  border-radius: 8px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

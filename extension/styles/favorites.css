@@ -15,15 +15,13 @@
   --favorite-panel-shadow: rgba(15, 23, 42, 0.06);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --favorite-focus: #3b82f6;
-    --favorite-focus-soft: #172554;
-    --favorites-panel-bg: #0f1115;
-    --favorite-card-surface: #171a20;
-    --favorite-icon-surface: #f8fafc;
-    --favorite-panel-shadow: rgba(0, 0, 0, 0.34);
-  }
+:root[data-theme="dark"] {
+  --favorite-focus: #3b82f6;
+  --favorite-focus-soft: #172554;
+  --favorites-panel-bg: #0f1115;
+  --favorite-card-surface: #171a20;
+  --favorite-icon-surface: #f8fafc;
+  --favorite-panel-shadow: rgba(0, 0, 0, 0.34);
 }
 
 .container,
