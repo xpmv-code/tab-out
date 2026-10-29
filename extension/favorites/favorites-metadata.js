@@ -55,6 +55,41 @@
     return /^#[0-9a-f]{6}$/i.test(color) ? color.toLowerCase() : fallback;
   }
 
+  /**
+   * hslToHex(h, s, l)
+   *
+   * HSL (h in degrees, s/l in 0..1) to a lowercase '#rrggbb' string.
+   */
+  function hslToHex(hue, saturation, lightness) {
+    const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+    const secondary = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
+    const match = lightness - chroma / 2;
+    let rgb;
+    if (hue < 60) rgb = [chroma, secondary, 0];
+    else if (hue < 120) rgb = [secondary, chroma, 0];
+    else if (hue < 180) rgb = [0, chroma, secondary];
+    else if (hue < 240) rgb = [0, secondary, chroma];
+    else if (hue < 300) rgb = [secondary, 0, chroma];
+    else rgb = [chroma, 0, secondary];
+    const toHex = channel => Math.round((channel + match) * 255).toString(16).padStart(2, '0');
+    return `#${toHex(rgb[0])}${toHex(rgb[1])}${toHex(rgb[2])}`;
+  }
+
+  /**
+   * generateBrandColor()
+   *
+   * Random hue with constrained saturation/lightness so colors stay in the
+   * app's muted, readable range instead of pure-RGB garishness. Used when a
+   * favorite is added without a chosen color and no known-site brand color
+   * applies; the result is persisted with the link, so it is assigned once.
+   */
+  function generateBrandColor() {
+    const hue = Math.floor(Math.random() * 360);
+    const saturation = 0.55 + Math.random() * 0.12;
+    const lightness = 0.42 + Math.random() * 0.12;
+    return hslToHex(hue, saturation, lightness);
+  }
+
   function getCategoryColor(category) {
     return CATEGORY_COLORS[category] || CATEGORY_COLORS['其他'];
   }
@@ -171,7 +206,7 @@
       description: known?.description || CATEGORY_DESCRIPTIONS[category] || CATEGORY_DESCRIPTIONS['其他'],
       category,
       badge: known?.badge || '',
-      color: known?.color || getCategoryColor(category),
+      color: known?.color || '',
       recommendedCategory: known?.category || '',
     };
   }
@@ -197,7 +232,7 @@
       favicon: cleanText(link.favicon, 500),
       category: groupCategory,
       badge: custom ? cleanText(link.badge, 16) : cleanText(link.badge, 16) || inferred.badge,
-      color: sanitizeColor(link.color, inferred.color),
+      color: sanitizeColor(link.color, inferred.color || generateBrandColor()),
       metadataSource: custom ? 'custom' : 'auto',
       suggestedCategory: cleanText(link.suggestedCategory, 30) || localSuggestion,
       suggestionStatus,
@@ -209,6 +244,7 @@
     CATEGORY_COLORS,
     cleanText,
     enrichFavorite,
+    generateBrandColor,
     getCategoryColor,
     inferFavoriteMetadata,
     mapServiceCategory,

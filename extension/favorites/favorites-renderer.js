@@ -65,7 +65,20 @@
     const customFavicon = /^chrome-extension:\/\//i.test(link.favicon || '')
       ? link.favicon
       : '';
-    const favicon = customFavicon || getFaviconUrl(link.url);
+    const apiFavicon = getFaviconUrl(link.url);
+    const chromeFavicon = utils.getFaviconFallbackUrl?.(link.url);
+    const siteFavicon = utils.getFaviconFallbackUrlNext?.(link.url);
+    const favicon = customFavicon || apiFavicon || chromeFavicon || siteFavicon;
+    const fallbackSources = [
+      ...(customFavicon ? [apiFavicon] : []),
+      chromeFavicon,
+      siteFavicon,
+    ].filter((source, index, sources) => source && source !== favicon && sources.indexOf(source) === index);
+    const fallbackAttributes = ['data-fallback-src', 'data-fallback-src-next', 'data-fallback-src-third'];
+    const fallbackSourceAttributes = fallbackSources
+      .slice(0, fallbackAttributes.length)
+      .map((source, index) => ` ${fallbackAttributes[index]}="${escapeAttr(source)}"`)
+      .join('');
     const initial = escapeHtml(getInitial(link.title));
 
     return `
@@ -74,7 +87,7 @@
           <span class="favorite-card-head">
             <span class="favorite-icon-shell">
               <span class="quick-link-letter" aria-hidden="true">${initial}</span>
-              ${favicon ? `<img class="quick-link-favicon" src="${escapeAttr(favicon)}" alt="">` : ''}
+              ${favicon ? `<img class="quick-link-favicon" src="${escapeAttr(favicon)}"${fallbackSourceAttributes} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : ''}
               ${badge}
             </span>
             <span class="favorite-identity">

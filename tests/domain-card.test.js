@@ -1,12 +1,17 @@
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
+const path = require('node:path');
 const { test } = require('node:test');
 const vm = require('node:vm');
 
+const extensionRoot = process.env.TAB_OUT_EXTENSION_ROOT
+  ? path.resolve(process.env.TAB_OUT_EXTENSION_ROOT)
+  : path.resolve(__dirname, '../extension');
+
 function loadDomainCardRenderer() {
-  const appPath = require.resolve('../extension/app.js');
+  const appPath = path.join(extensionRoot, 'app.js');
   const source = readFileSync(appPath, 'utf8').replace(
-    /renderDashboard\(\);\s*$/,
+    /renderDashboard\(\);(?=\s*(?:\/\/# sourceMappingURL=[^\r\n]+\s*)?$)/,
     'globalThis.__tabOutTest = { renderDomainCard };'
   );
   const listener = { addListener() {} };

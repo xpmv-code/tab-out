@@ -4,7 +4,7 @@
 
 Tab Out 是一个 Chrome Manifest V3 扩展，会替换浏览器的新标签页。它可以按域名或网站类型整理所有已打开的标签页，并提供搜索、去重、稍后查看、常用标签页、工作空间、浏览时间线和本地清理统计。
 
-项目不需要服务器、账号、Node.js 或构建步骤。默认情况下，数据只保存在浏览器本地；只有主动配置 DeepSeek 后，未知网站的主机名才会发送到 DeepSeek API 进行分类。
+核心功能默认本地优先，无需账号、服务器、Node.js 或构建步骤。可选的云同步功能需要用户自备 Supabase 项目和独立的 Tab Out 邮箱账号；未配置时不会连接 Supabase，现有本地功能不变。常用标签页网站图标会将对应域名发送到 Favicon.im；只有主动配置 DeepSeek 后，未知网站的主机名才会发送到 DeepSeek API 进行分类。仓库开发者可使用可选的 TypeScript 与 esbuild 工具链验证后续迁移。
 
 ## 当前功能
 
@@ -30,6 +30,32 @@ Tab Out 是一个 Chrome Manifest V3 扩展，会替换浏览器的新标签页�
 - 自动提示更合适的网站分类，可接受或忽略建议
 - 删除后支持撤销，重复网址不会被再次添加
 - 使用 JSON 导入或导出全部常用标签页与分组
+
+### 跨 Chrome 配置文件云同步（可选）
+
+使用此功能可让不同 Google 账号登录的 Chrome 配置文件共享同一份常用标签页。每个配置文件都需要安装 Tab Out，并登录同一个独立的 Tab Out 邮箱账号。
+
+1. 在 Supabase 创建项目，建议选择距离自己较近的数据区域。
+2. 在 Supabase SQL Editor 中执行仓库文件 supabase/migrations/20261017000000_quick_link_sync.sql。
+3. 在 Supabase Authentication 的邮件模板中，配置 Email OTP 模式，并在邮件正文使用 {{ .Token }} 发送数字验证码（不要只发送 magic link）。
+   注意：Supabase 默认邮件服务通常只向 Supabase 组织成员邮箱发送邮件，并且发送频率受限。要让任意邮箱都能注册登录，需在 Authentication → SMTP Settings 配置自定义 SMTP；详见 [Supabase 官方说明](https://supabase.com/docs/guides/auth/auth-smtp)。
+
+4. 在被 Git 忽略的 extension/config.local.js 中添加以下配置，替换为 Supabase 项目 URL 和客户端 Publishable key（旧项目可使用 anon key）：
+
+   ~~~javascript
+   globalThis.TAB_OUT_SYNC_CONFIG = {
+     supabaseUrl: 'https://YOUR_PROJECT_REF.supabase.co',
+     publishableKey: 'YOUR_PUBLISHABLE_KEY',
+   };
+   ~~~
+
+   不要填写 service_role、secret key 或数据库密码。客户端 key 本身不是机密；真正的数据隔离由数据库 RLS 完成。
+5. 在 chrome://extensions 重新加载扩展，打开新标签页，点击常用标签区域的“云同步”，请求 Supabase 主机权限并通过邮箱验证码登录。
+6. 在其他 Chrome 配置文件中重复安装/加载扩展、添加同样的本地 Supabase 配置，然后登录同一个 Tab Out 账号。
+
+首次同步会保留并合并本地收藏，不会直接用云端覆盖本地。修改通常会在新标签页内很快推送；Chrome 运行期间，Service Worker 也会使用 Alarms 定期拉取云端变化（约每 5 分钟一次），并对失败的待同步操作安排持久重试，因此不必一直开着新标签页。离线时保持本地可用，恢复网络后重试；浏览器完全退出期间不会执行网络同步。第一阶段只同步常用标签页、分组与顺序；工作空间、浏览历史、时间线、统计和缓存仍保留在各自本地。
+
+隐私说明：启用后，常用标签页的标题、网址、分组和自定义字段会发送到你配置的 Supabase 项目并在登录设备间共享。Supabase Auth 保存登录账号信息；访问令牌保存在当前 Chrome 配置文件的本地扩展存储中。Favicon.im 的图标请求仍会独立发送网站域名。不同的 Tab Out 账号拥有相互隔离的云端记录。
 
 ### 稍后查看
 
@@ -126,8 +152,11 @@ globalThis.DEEPSEEK_MODEL = 'deepseek-chat';
 | 数据 | 存储位置 | 是否联网 |
 | --- | --- | --- |
 | 稍后查看、常用标签页、工作空间、当前常用分组 | `chrome.storage.local` | 否 |
+| 分组偏好（域名→分组选择记录） | `chrome.storage.local` | 否 |
+| 主题偏好（浅色/深色/跟随系统） | 页面 `localStorage` | 否 |
 | 浏览时间线会话、清理统计、网站分类缓存 | 本地 IndexedDB | 否 |
 | 当前打开的标签页 | 通过 Chrome Tabs API 实时读取 | 否 |
+| 常用标签页网站图标 | Favicon.im API（仅发送域名） | 是 |
 | 未知网站分类 | DeepSeek API，仅在配置密钥后启用 | 是，仅发送主机名 |
 
 扩展申请以下 Chrome 权限：
@@ -135,7 +164,8 @@ globalThis.DEEPSEEK_MODEL = 'deepseek-chat';
 - `tabs` / `activeTab`：读取、跳转、创建和关闭标签页
 - `storage`：保存常用标签页、稍后查看和工作空间
 - `history`：生成最近浏览时间线
-- `favicon`：显示网站图标
+- `favicon`：显示 Chrome 提供的网站图标后备来源
+- 常用标签页主图标通过 `https://a.favicon.im/{domain}` 获取；请求失败时回退到 Chrome 图标接口和网站的 `/favicon.ico`
 - `https://api.deepseek.com/*`：支持可选的网站类型分类
 
 ## 更新
@@ -148,15 +178,42 @@ git pull
 
 然后打开 `chrome://extensions`，点击 Tab Out 卡片上的**重新加载**按钮。
 
+## 开发与构建
+
+普通用户仍然直接加载 `extension/`，无需执行本节命令。开发者首次准备环境时运行：
+
+```bash
+npm ci
+```
+
+完整验证命令会依次执行 TypeScript 配置检查、esbuild 构建、生成脚本语法检查，并把现有测试分别运行在源码和构建产物上：
+
+```bash
+npm run verify
+```
+
+只更新 TypeScript 生成文件并生成构建镜像时运行：
+
+```bash
+npm run build
+```
+
+时间线搜索的手写源码位于 `src/timeline/timeline-search.ts`，命令会先更新供 Chrome 直接加载的 `extension/timeline-search.js`。完整构建镜像位于 `dist/extension/`；该目录可能包含从本地复制的 `config.local.js`，因此已被 Git 忽略，不应提交。
+
 ## 项目结构
 
 ```text
+src/
+└── timeline/
+    └── timeline-search.ts       # 时间线搜索 TypeScript 源码
+
 extension/
 ├── manifest.json              # Chrome 扩展清单
 ├── index.html                 # 新标签页界面
 ├── app.js                     # 看板、常用标签页、稍后查看与工作空间
 ├── background.js              # Service Worker、角标与后台消息
 ├── timeline-data.js           # 浏览历史清洗、会话聚合与标签树
+├── timeline-search.js         # 从 TypeScript 生成的浏览器脚本
 ├── constants/                 # 网站分类规则
 ├── favorites/                 # 常用标签页元数据与渲染
 ├── services/                  # 分类和清理统计服务
@@ -168,6 +225,7 @@ extension/
 
 - Chrome Manifest V3
 - 原生 HTML、CSS、JavaScript
+- TypeScript + esbuild（仅开发构建链，运行时仍为 JavaScript）
 - Chrome Tabs、Windows、History、Storage 和 Favicon API
 - `chrome.storage.local` + IndexedDB
 - Web Audio API + CSS 动画

@@ -90,9 +90,9 @@ Once the extension is loaded:
 
 ## Key Facts
 
-- Tab Out is a pure Chrome extension. No server, no Node.js, no npm.
-- Saved tabs are stored in `chrome.storage.local` (persists across sessions).
-- 100% local. No data is sent to any external service.
+- Tab Out is a pure Chrome extension. Core features run locally and end-user installation needs no Node.js or npm; repository development has an optional npm build and verification toolchain.
+- Favorites are stored in `chrome.storage.local`; browsing history, timeline and analytics remain local.
+- Optional Supabase sync is disabled until the user configures a client key and logs in. If enabled, favorite titles, URLs, groups and custom fields are sent to the configured Supabase project; never put service_role/secret keys in extension code.
 - To update: `cd tab-out && git pull`, then reload the extension in `chrome://extensions`.
 
 ## Agent skills
