@@ -4,9 +4,7 @@ const path = require('node:path');
 const { test } = require('node:test');
 const vm = require('node:vm');
 
-const extensionRoot = process.env.TAB_OUT_EXTENSION_ROOT
-  ? path.resolve(process.env.TAB_OUT_EXTENSION_ROOT)
-  : path.resolve(__dirname, '../extension');
+const extensionRoot = path.resolve(__dirname, '../extension');
 
 function loadDomainCardRenderer() {
   const appPath = path.join(extensionRoot, 'app.js');

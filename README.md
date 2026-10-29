@@ -4,7 +4,7 @@
 
 Tab Out 是一个 Chrome Manifest V3 扩展，会替换浏览器的新标签页。它可以按域名或网站类型整理所有已打开的标签页，并提供搜索、去重、稍后查看、常用标签页、工作空间、浏览时间线和本地清理统计。
 
-核心功能默认本地优先，无需账号、服务器、Node.js 或构建步骤。可选的云同步功能需要用户自备 Supabase 项目和独立的 Tab Out 邮箱账号；未配置时不会连接 Supabase，现有本地功能不变。常用标签页网站图标会将对应域名发送到 Favicon.im；只有主动配置 DeepSeek 后，未知网站的主机名才会发送到 DeepSeek API 进行分类。仓库开发者可使用可选的 TypeScript 与 esbuild 工具链验证后续迁移。
+核心功能默认本地优先，无需账号、服务器、Node.js 或构建步骤。可选的云同步功能需要用户自备 Supabase 项目和独立的 Tab Out 邮箱账号；未配置时不会连接 Supabase，现有本地功能不变。常用标签页网站图标会将对应域名发送到 Favicon.im；只有主动配置 DeepSeek 后，未知网站的主机名才会发送到 DeepSeek API 进行分类。仓库开发者可使用可选的 Node.js 测试脚本验证改动。
 
 ## 当前功能
 
@@ -178,45 +178,38 @@ git pull
 
 然后打开 `chrome://extensions`，点击 Tab Out 卡片上的**重新加载**按钮。
 
-## 开发与构建
+## 开发与验证
 
-普通用户仍然直接加载 `extension/`，无需执行本节命令。开发者首次准备环境时运行：
+普通用户仍然直接加载 `extension/`，无需执行本节命令，也无需运行 `npm install`。
 
-```bash
-npm ci
-```
+全部运行时代码均为手写原生 JavaScript，直接编辑 `extension/` 下的文件即可；修改后在 `chrome://extensions` 重新加载扩展。
 
-完整验证命令会依次执行 TypeScript 配置检查、esbuild 构建、生成脚本语法检查，并把现有测试分别运行在源码和构建产物上：
+运行语法检查与单元测试：
 
 ```bash
 npm run verify
 ```
 
-只更新 TypeScript 生成文件并生成构建镜像时运行：
+只运行单元测试：
 
 ```bash
-npm run build
+npm test
 ```
-
-时间线搜索的手写源码位于 `src/timeline/timeline-search.ts`，命令会先更新供 Chrome 直接加载的 `extension/timeline-search.js`。完整构建镜像位于 `dist/extension/`；该目录可能包含从本地复制的 `config.local.js`，因此已被 Git 忽略，不应提交。
 
 ## 项目结构
 
 ```text
-src/
-└── timeline/
-    └── timeline-search.ts       # 时间线搜索 TypeScript 源码
-
 extension/
 ├── manifest.json              # Chrome 扩展清单
 ├── index.html                 # 新标签页界面
-├── app.js                     # 看板、常用标签页、稍后查看与工作空间
+├── app.js                     # 看板、常用标签页、稍后查看、工作空间与设置页
 ├── background.js              # Service Worker、角标与后台消息
+├── theme.js                   # 主题引导（首帧前解析浅色/深色/跟随系统）
 ├── timeline-data.js           # 浏览历史清洗、会话聚合与标签树
-├── timeline-search.js         # 从 TypeScript 生成的浏览器脚本
+├── timeline-search.js         # 时间线搜索
 ├── constants/                 # 网站分类规则
 ├── favorites/                 # 常用标签页元数据与渲染
-├── services/                  # 分类和清理统计服务
+├── services/                  # 分类、清理统计、云同步与分组偏好服务
 ├── storage/                   # IndexedDB 与分类缓存
 └── styles/                    # 页面样式和动画
 ```
@@ -225,7 +218,6 @@ extension/
 
 - Chrome Manifest V3
 - 原生 HTML、CSS、JavaScript
-- TypeScript + esbuild（仅开发构建链，运行时仍为 JavaScript）
 - Chrome Tabs、Windows、History、Storage 和 Favicon API
 - `chrome.storage.local` + IndexedDB
 - Web Audio API + CSS 动画

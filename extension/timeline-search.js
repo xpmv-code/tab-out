@@ -1,7 +1,11 @@
-/* 此文件由 src/timeline/timeline-search.ts 生成，请勿直接编辑。 */
+/**
+ * Tab Out timeline search.
+ *
+ * Filters the browsing timeline by query tokens across titles, hostnames
+ * and URLs, and produces paginated results with match reasons.
+ */
 "use strict";
 (() => {
-  // src/timeline/timeline-search.ts
   function normalizeTokens(query) {
     return String(query || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
   }
