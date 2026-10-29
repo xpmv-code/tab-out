@@ -1,7 +1,32 @@
 const assert = require('node:assert/strict');
+const { readFileSync } = require('node:fs');
+const path = require('node:path');
 const { test } = require('node:test');
+const vm = require('node:vm');
 
-const { searchTimeline } = require('../extension/timeline-search.js');
+const extensionRoot = process.env.TAB_OUT_EXTENSION_ROOT
+  ? path.resolve(process.env.TAB_OUT_EXTENSION_ROOT)
+  : path.resolve(__dirname, '../extension');
+
+function loadTimelineSearchModule() {
+  const modulePath = path.join(extensionRoot, 'timeline-search.js');
+  const source = readFileSync(modulePath, 'utf8');
+  const previousModule = globalThis.TabOutTimelineSearch;
+
+  try {
+    vm.runInThisContext(source, { filename: modulePath });
+    return globalThis.TabOutTimelineSearch;
+  } finally {
+    if (previousModule === undefined) delete globalThis.TabOutTimelineSearch;
+    else globalThis.TabOutTimelineSearch = previousModule;
+  }
+}
+
+const { searchTimeline } = loadTimelineSearchModule();
+
+test('browser script exposes the stable timeline search interface', () => {
+  assert.equal(typeof searchTimeline, 'function');
+});
 
 test('user can search current tabs and history with AND terms while keeping tree context', () => {
   const snapshot = {

@@ -15,6 +15,7 @@ importScripts(
   'services/categoryService.js',
   'services/analyticsService.js',
   'timeline-data.js',
+  'services/cloudSync.js',
 );
 
 const WORKER_CHANNEL = 'tab-out-worker';
@@ -22,6 +23,121 @@ const trackedTabs = new Map();
 const pendingTabMutations = [];
 let tabStateInitialized = false;
 let tabStateInitializationPromise = null;
+
+const TAB_OUT_SYNC_RETRY_ALARM = 'tab-out-cloud-sync-retry';
+const TAB_OUT_SYNC_POLL_ALARM = 'tab-out-cloud-sync-poll';
+const TAB_OUT_SYNC_SESSION_KEY = 'tabOutSyncSession';
+const TAB_OUT_SYNC_PENDING_KEY = 'tabOutSyncPending';
+
+function getTabOutSyncOriginPattern() {
+  const rawUrl = globalThis.TAB_OUT_SYNC_CONFIG?.supabaseUrl;
+  try {
+    const parsed = new URL(String(rawUrl || '').trim());
+    if (parsed.protocol !== 'https:' || !/^[a-z0-9-]+\.supabase\.co$/i.test(parsed.hostname)) return '';
+    if (parsed.pathname !== '/' || parsed.search || parsed.hash) return '';
+    return parsed.origin + '/*';
+  } catch {
+    return '';
+  }
+}
+
+async function clearTabOutSyncAlarms() {
+  await chrome.alarms.clear(TAB_OUT_SYNC_RETRY_ALARM);
+  await chrome.alarms.clear(TAB_OUT_SYNC_POLL_ALARM);
+}
+
+async function ensureTabOutSyncAlarms() {
+  if (!globalThis.TabOutCloudSync?.isConfigured()) {
+    await clearTabOutSyncAlarms();
+    return;
+  }
+
+  const state = await chrome.storage.local.get([
+    TAB_OUT_SYNC_SESSION_KEY,
+    TAB_OUT_SYNC_PENDING_KEY,
+  ]);
+  const session = state[TAB_OUT_SYNC_SESSION_KEY];
+  if (!session?.userId || !session?.accessToken) {
+    await clearTabOutSyncAlarms();
+    return;
+  }
+
+  const originPattern = getTabOutSyncOriginPattern();
+  if (!originPattern || !(await chrome.permissions.contains({ origins: [originPattern] }))) {
+    await clearTabOutSyncAlarms();
+    return;
+  }
+
+  // Poll while Chrome is running so remote changes are applied even if no Tab Out
+  // page is open. Pending writes get an additional early retry after worker wake-up.
+  chrome.alarms.create(TAB_OUT_SYNC_POLL_ALARM, { periodInMinutes: 5 });
+  const pending = state[TAB_OUT_SYNC_PENDING_KEY];
+  if (pending && pending.ownerId === session.userId) {
+    chrome.alarms.create(TAB_OUT_SYNC_RETRY_ALARM, { delayInMinutes: 0.5 });
+  } else {
+    await chrome.alarms.clear(TAB_OUT_SYNC_RETRY_ALARM);
+  }
+}
+
+async function runTabOutSyncAlarm() {
+  if (!globalThis.TabOutCloudSync?.isConfigured()) return;
+  const state = await chrome.storage.local.get(TAB_OUT_SYNC_SESSION_KEY);
+  const session = state[TAB_OUT_SYNC_SESSION_KEY];
+  if (!session?.userId || !session?.accessToken) return;
+
+  const originPattern = getTabOutSyncOriginPattern();
+  if (!originPattern || !(await chrome.permissions.contains({ origins: [originPattern] }))) return;
+
+  try {
+    await globalThis.TabOutCloudSync.syncNow({ requestPermission: false });
+    const latest = await chrome.storage.local.get([
+      TAB_OUT_SYNC_SESSION_KEY,
+      TAB_OUT_SYNC_PENDING_KEY,
+    ]);
+    const activeSession = latest[TAB_OUT_SYNC_SESSION_KEY];
+    const pending = latest[TAB_OUT_SYNC_PENDING_KEY];
+    if (
+      activeSession?.userId === session.userId &&
+      (!pending || pending.ownerId !== session.userId)
+    ) {
+      await chrome.alarms.clear(TAB_OUT_SYNC_RETRY_ALARM);
+    }
+  } catch (error) {
+    console.warn('[tab-out] Background cloud sync failed; a retry will be scheduled.', error);
+  }
+}
+
+chrome.alarms.onAlarm.addListener(alarm => {
+  if (alarm.name !== TAB_OUT_SYNC_RETRY_ALARM && alarm.name !== TAB_OUT_SYNC_POLL_ALARM) return;
+  runTabOutSyncAlarm().catch(error => {
+    console.warn('[tab-out] Could not run background cloud sync:', error);
+  });
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local') return;
+  if (changes[TAB_OUT_SYNC_SESSION_KEY]) {
+    ensureTabOutSyncAlarms().then(() => {
+      const session = changes[TAB_OUT_SYNC_SESSION_KEY].newValue;
+      if (session?.userId && session?.accessToken) {
+        chrome.alarms.create(TAB_OUT_SYNC_RETRY_ALARM, { delayInMinutes: 0.5 });
+      }
+    }).catch(error => {
+      console.warn('[tab-out] Could not update cloud sync alarms:', error);
+    });
+  }
+
+  const pending = changes[TAB_OUT_SYNC_PENDING_KEY]?.newValue;
+  if (pending) {
+    chrome.alarms.create(TAB_OUT_SYNC_RETRY_ALARM, { delayInMinutes: 0.5 });
+  }
+});
+
+chrome.permissions.onAdded.addListener(() => {
+  ensureTabOutSyncAlarms().catch(error => {
+    console.warn('[tab-out] Could not arm cloud sync after permissions changed:', error);
+  });
+});
 
 function normalizeTrackedTab(tab, existing = {}) {
   return {
@@ -203,10 +319,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 chrome.runtime.onInstalled.addListener(() => {
   initializeTabState(true);
+  ensureTabOutSyncAlarms().catch(error => {
+    console.warn('[tab-out] Could not initialize cloud sync alarms:', error);
+  });
 });
 
 chrome.runtime.onStartup.addListener(() => {
   initializeTabState(true);
+  ensureTabOutSyncAlarms().catch(error => {
+    console.warn('[tab-out] Could not restore cloud sync alarms:', error);
+  });
 });
 
 chrome.tabs.onCreated.addListener(tab => {
@@ -226,6 +348,10 @@ chrome.tabs.onActivated.addListener(activeInfo => {
   trackedTabs.forEach(tab => {
     if (tab.windowId === activeInfo.windowId) tab.active = tab.id === activeInfo.tabId;
   });
+});
+
+ensureTabOutSyncAlarms().catch(error => {
+  console.warn('[tab-out] Could not inspect cloud sync state:', error);
 });
 
 initializeTabState();

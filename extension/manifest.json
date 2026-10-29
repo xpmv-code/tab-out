@@ -3,8 +3,9 @@
   "name": "Tab Out",
   "version": "1.0.0",
   "description": "本地优先管理已打开标签页，支持按域名或网站类型分组、搜索、去重和工作空间。",
-  "permissions": ["tabs", "activeTab", "storage", "history", "favicon"],
+  "permissions": ["tabs", "activeTab", "storage", "history", "favicon", "alarms"],
   "host_permissions": ["https://api.deepseek.com/*"],
+  "optional_host_permissions": ["https://*.supabase.co/*"],
   "chrome_url_overrides": { "newtab": "index.html" },
   "background": { "service_worker": "background.js" },
   "action": {
